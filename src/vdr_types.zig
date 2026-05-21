@@ -1653,10 +1653,13 @@ pub const RelationType = enum(i32) {
     spans, // Geography: X extends across or operates through multiple Y
     borders, // Geography: X is spatially adjacent to Y; symmetric
     influences, // Geography: X affects value/behavior of Y without sole determination
-    amplifies, // Geography: X strengthens Y through positive feedback
+    amplifies, // Geography/Neuro: X strengthens Y through positive feedback
     regulates, // Anatomy: X controls or modulates activity of Y via feedback/signaling
-    supplies, // Anatomy: X provides essential material (blood/nutrients/O₂) to Y
-    flows_to, // Anatomy: X delivers flow (blood/air/filtrate/signal) to Y
+    supplies, // Anatomy: X provides essential material to Y
+    flows_to, // Anatomy/Neuro: X delivers flow to Y directionally
+    activates, // Neuroscience: X triggers Y into active state via binding/signaling
+    encoded_by, // Neuroscience: X is represented through Y's activity pattern
+    mediates, // Neuroscience: X is the mechanism through which Y occurs
 
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
