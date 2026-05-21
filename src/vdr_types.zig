@@ -1648,8 +1648,8 @@ pub const RelationType = enum(i32) {
     confers, // Physics: grants a property or capability to
     unifies, // Physics: integrates separate entities into single framework
     foundation_for, // Math: provides axiomatic ground from which Y is built
-    constrains, // Math: imposes limitation or restriction on Y
-    produces, // Geography: X actively generates Y through ongoing process
+    constrains, // Math/Algorithms: imposes limitation or restriction on Y
+    produces, // Geography/Mechanical: X actively generates Y through ongoing process
     spans, // Geography: X extends across or operates through multiple Y
     borders, // Geography: X is spatially adjacent to Y; symmetric
     influences, // Geography: X affects value/behavior of Y without sole determination
@@ -1660,6 +1660,13 @@ pub const RelationType = enum(i32) {
     activates, // Neuroscience: X triggers Y into active state via binding/signaling
     encoded_by, // Neuroscience: X is represented through Y's activity pattern
     mediates, // Neuroscience: X is the mechanism through which Y occurs
+    mitigated_by, // Engineering/DS: problem X is remedied by design choice Y
+    degrades, // Engineering/DS: X worsens performance or quality of Y
+    favors, // Engineering/DS: X preferentially benefits Y's performance
+    solves, // Algorithms: X provides the solution to problem Y
+    bounded_by, // Algorithms: X has Y as a proven performance bound
+    simplifies, // Engineering/DS: X reduces complexity or difficulty of Y
+    maintains, // Engineering/DS: X preserves or upholds Y across operations
 
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
