@@ -10,7 +10,7 @@
 
 This spec defines the complete VDR-Prolog system running on a single laptop. No GPU. No device/host split. All compute is CPU with AVX2 SIMD. All memory is fixed-size arenas allocated at startup. No malloc after init. Target: Dell Legion 5 (~2019), 6-8 core x86_64, 16-32GB RAM, AVX2.
 
-The model is not a monolith. Model weights live in KBs. Access to model weight KBs is grant-gated. Different users see different model capabilities. Each LLM session gets an ephemeral KB subtree for scratch work, addressed with negative IDs that never collide with global data.
+The model is not a monolith. Model weights live in KBs. Access to model weight KBs is grant-gated. Different users see different model capabilities. Each LLM session gets an session KB subtree for scratch work, addressed with negative IDs that never collide with global data.
 
 ---
 
@@ -59,17 +59,17 @@ Every entity (KB, fact slot, rule, term, grammar) has a 64-bit ID. Bit 63 (sign 
 
 ```
 Bit 63 = 0: Global (positive). Persistent. Shared across sessions.
-Bit 63 = 1: Ephemeral (negative). Session-local. Dies with session.
+Bit 63 = 1: Session (negative). Session-local. Dies with session.
 ```
 
-Global IDs are UUID-derived, always positive. Ephemeral IDs are monotonically decrementing negative integers, unique within a session.
+Global IDs are UUID-derived, always positive. Session IDs are monotonically decrementing negative integers, unique within a session.
 
 ```
 struct vlp_id {
-    v: i64,   // positive = global, negative = ephemeral
+    v: i64,   // positive = global, negative = session
 
     pub fn isGlobal(self: vlp_id) bool { return self.v >= 0; }
-    pub fn isEphemeral(self: vlp_id) bool { return self.v < 0; }
+    pub fn isSession(self: vlp_id) bool { return self.v < 0; }
 };
 ```
 
@@ -86,19 +86,19 @@ fn generateGlobalId(counter: *i64) vlp_id {
 }
 ```
 
-### 3.3 Ephemeral ID Generation
+### 3.3 Session ID Generation
 
 Each session owns a decrementing counter starting at -1.
 
 ```
-fn generateEphemeralId(counter: *i64) vlp_id {
+fn generateSessionId(counter: *i64) vlp_id {
     const id = counter.*;
     counter.* -= 1;
     return .{ .v = id };  // -1, -2, -3, ...
 }
 ```
 
-Ephemeral IDs never collide with global IDs. Session A's -5 and session B's -5 are in different session scopes — they never share an arena or namespace.
+Session IDs never collide with global IDs. Session A's -5 and session B's -5 are in different session scopes — they never share an arena or namespace.
 
 ### 3.4 Dual Addressing — Walk and Direct
 
@@ -116,9 +116,9 @@ root.science.physics.qed.alpha_em
   direct: UUID 0x3A7F...                  (hash-based, one hop)
 ```
 
-### 3.5 Session Ephemeral Tree
+### 3.5 Session Session Tree
 
-Each session gets an ephemeral root at ID -1. The LLM writes scratch data here.
+Each session gets an session root at ID -1. The LLM writes scratch data here.
 
 ```
 session_root = -1
@@ -128,9 +128,9 @@ session_root.notes = -4
 session_root.notes.hypothesis_1 = -5
 ```
 
-These IDs are local to the session. When the session dies, the ephemeral arena region is freed. No cleanup of individual entries needed — the arena bump pointer resets.
+These IDs are local to the session. When the session dies, the session arena region is freed. No cleanup of individual entries needed — the arena bump pointer resets.
 
-The LLM can write ephemeral notes to itself:
+The LLM can write session notes to itself:
 
 ```
 CMD_KB_ASSERT session_root.notes.hypothesis_1 fact(confidence_too_low, retry_with_source_b)
@@ -138,16 +138,16 @@ CMD_KB_ASSERT session_root.notes.hypothesis_1 fact(confidence_too_low, retry_wit
 
 This is a scratchpad the LLM controls. It persists across turns within a session but dies with the session. It's in the session's per-core arena, so access is local memory — no contention.
 
-### 3.6 Ephemeral-to-Global Promotion
+### 3.6 Session-to-Global Promotion
 
-When the LLM formalizes an ephemeral fact as a Prolog rule or asserts it to a global KB, the data crosses from negative to positive address space:
+When the LLM formalizes an session fact as a Prolog rule or asserts it to a global KB, the data crosses from negative to positive address space:
 
 ```
 // LLM discovers something worth keeping
 CMD_KB_ASSERT root.science.physics.qed.alpha_strong fact(value, 11800)
 ```
 
-This writes to the global store with a new global UUID. The ephemeral version can be retracted or left to die with the session. Promotion is explicit — ephemeral data never leaks to global implicitly.
+This writes to the global store with a new global UUID. The session version can be retracted or left to die with the session. Promotion is explicit — session data never leaks to global implicitly.
 
 ---
 
@@ -229,7 +229,7 @@ struct vlp_fact {
 ```
 struct vlp_kb {
     // Identity
-    id: vlp_id,                  // i64: positive = global, negative = ephemeral
+    id: vlp_id,                  // i64: positive = global, negative = session
     parent_id: vlp_id,           // i64: -1 special = no parent (root)
     name_offset: i32,            // offset into text store
     name_length: i16,
@@ -377,8 +377,8 @@ struct vlp_session {
     id: vlp_id,                  // global UUID for the session
     user_id: vlp_id,
     kb_root_id: vlp_id,          // global root KB
-    ephemeral_root_id: vlp_id,   // always negative, session's scratch tree root
-    ephemeral_next_id: i64,      // next ephemeral ID to assign (decrements)
+    session_root_id: vlp_id,   // always negative, session's scratch tree root
+    session_next_id: i64,      // next session ID to assign (decrements)
     visibility_level: i8,
     state: vlp_session_state,
 
@@ -388,7 +388,7 @@ struct vlp_session {
 
     // Resource bounds
     max_kb_count: i32,
-    max_ephemeral_kbs: i32,      // max ephemeral KBs per session
+    max_session_kbs: i32,      // max session KBs per session
     max_live_memory_bytes: i64,
     max_turns: i32,
 
@@ -396,7 +396,7 @@ struct vlp_session {
     current_turn: i32,
     facts_asserted: i32,
     facts_retracted: i32,
-    ephemeral_facts_asserted: i32,
+    session_facts_asserted: i32,
     rules_fired: i64,
     prolog_queries: i64,
     primitive_calls: i64,
@@ -488,8 +488,8 @@ Global Arena (1 instance, read-heavy, write-rare):
 
 Per-Core Arena (N instances, one per physical core):
     Session table:        ~64 KB (up to 500 sessions per core)
-    Ephemeral KB store:   ~8 MB (per-session scratch KBs)
-    Ephemeral fact store: ~48 MB (per-session scratch facts)
+    Session KB store:   ~8 MB (per-session scratch KBs)
+    Session fact store: ~48 MB (per-session scratch facts)
     KV cache:             ~128 MB (partitioned across sessions on this core)
     Scratch buffers:      ~32 MB (matmul intermediates, attention scores)
     Binding buffers:      ~1 MB (Prolog unification)
@@ -759,7 +759,7 @@ vlp_inference_cycle(session: vlp_session_handle, input: []const u8,
     context.append(input_tokens);            // current turn
     context.append(scratchpad);              // previous command results, ~0-50 tokens
     // Context does NOT contain prior turns, data, prior reasoning, or templates.
-    // Those are in KBs (global or ephemeral).
+    // Those are in KBs (global or session).
 
     // Phase 3: Check which model KBs this session can access
     visible_layers = vlp_access_resolve_model(session);
@@ -776,8 +776,8 @@ vlp_inference_cycle(session: vlp_session_handle, input: []const u8,
         if is_command_start(token):
             command = vlp_generate_command(session);  // constrained vocab
             result = vlp_command_execute(session, command);
-            // Result goes to scratchpad (ephemeral KB)
-            vlp_kb_assert(session.ephemeral_root_id, scratchpad_slot, result);
+            // Result goes to scratchpad (session KB)
+            vlp_kb_assert(session.session_root_id, scratchpad_slot, result);
 
         elif is_direct_output(token):
             kb_url = vlp_parse_kb_url(token_stream);
@@ -815,9 +815,9 @@ L2 — LLM Invokes Rule:      ~8 command tokens + ~10 prose tokens. ~3% of L1 co
 L3 — Automatic Rule Firing:  0 LLM tokens. Pure Prolog. 93% of ops at maturity.
 ```
 
-### 8.3 Ephemeral Scratchpad Usage
+### 8.3 Session Scratchpad Usage
 
-The LLM uses its ephemeral KB for working memory between turns:
+The LLM uses its session KB for working memory between turns:
 
 ```
 // Turn 1: LLM investigates an issue
@@ -831,7 +831,7 @@ CMD_KB_QUERY session_root.notes.investigation
 // Turn 3: LLM concludes and promotes to global
 CMD_KB_ASSERT root.ops.incidents.inc_042 fact(root_cause, checkout_memory_leak)
 CMD_KB_ASSERT root.ops.incidents.inc_042 fact(source, session_root.notes.investigation)
-// Ephemeral data referenced in global provenance
+// Session data referenced in global provenance
 ```
 
 ---
@@ -850,24 +850,24 @@ vlp_kb_store_fact_write(kb_id: vlp_id, slot_id: i32, fact: *vlp_fact) -> vlp_sta
 
 vlp_kb_store_fact_read(kb_id: vlp_id, slot_id: i32) -> ?*vlp_fact
     // Same arena resolution. Return pointer directly into arena memory.
-    // No copy. Caller reads from arena. Read-only for global, read-write for ephemeral.
+    // No copy. Caller reads from arena. Read-only for global, read-write for session.
 
 vlp_kb_store_scoped_search(start_kb_id: vlp_id, tag: vlp_fact_tag, max_depth: i32) -> search_result
-    // Walk parent chain. If start is ephemeral (-), walk ephemeral tree first,
+    // Walk parent chain. If start is session (-), walk session tree first,
     // then cross to global (+) at the session's kb_root_id junction.
-    // Ephemeral KBs shadow global KBs at the same path position.
+    // Session KBs shadow global KBs at the same path position.
 ```
 
-### 9.2 Ephemeral/Global Resolution
+### 9.2 Session/Global Resolution
 
-When the LLM queries a path, ephemeral takes priority:
+When the LLM queries a path, session takes priority:
 
 ```
 Query: root.science.physics.qed.alpha_em
 
 Resolution order:
-1. Check session's ephemeral tree: session_root.science.physics.qed.alpha_em (-1.-2.-3.-4.-5)
-   If found → return ephemeral version
+1. Check session's session tree: session_root.science.physics.qed.alpha_em (-1.-2.-3.-4.-5)
+   If found → return session version
 2. Check global tree: root.science.physics.qed.alpha_em (1.12.17.13.25)
    If found → return global version
 3. Not found → walk parent chain for scoped search
@@ -877,7 +877,7 @@ This means a session can override global data locally without modifying the glob
 
 ### 9.3 COW for Clone Sessions
 
-Clone sessions share the parent's global KB references and get a COW copy of the parent's ephemeral tree. Page-level dirty tracking, same as v0.1 but operating on arena memory pages instead of device memory pages.
+Clone sessions share the parent's global KB references and get a COW copy of the parent's session tree. Page-level dirty tracking, same as v0.1 but operating on arena memory pages instead of device memory pages.
 
 ---
 
@@ -897,7 +897,7 @@ vlp_prolog_unify(a: *vlp_term, b: *vlp_term, bindings: []vlp_binding, n: *i32) -
 vlp_prolog_query(kb_store: *vlp_kb_store, start_kb_id: vlp_id, query: *vlp_term) -> query_result
     // Depth-first search with backtracking.
     // Iterative with explicit stack (in per-core arena scratch).
-    // Searches ephemeral tree first if start_kb_id is ephemeral.
+    // Searches session tree first if start_kb_id is session.
     // Crosses to global tree at session junction point.
 
 vlp_prolog_fire_and_commit(kb_store: *vlp_kb_store, kb_id: vlp_id) -> i32
@@ -914,7 +914,7 @@ vlp_prolog_fire_and_commit(kb_store: *vlp_kb_store, kb_id: vlp_id) -> i32
 
 Same as v0.1 with two changes:
 - All ID fields are now i64 (vlp_id) instead of i32
-- Ephemeral region included in snapshot
+- Session region included in snapshot
 
 ```
 struct vlp_snapshot_header {
@@ -934,10 +934,10 @@ struct vlp_snapshot_header {
     live_state_region_size: i64,
     grant_region_size: i64,
 
-    // Ephemeral region sizes
-    ephemeral_kb_region_size: i64,
-    ephemeral_fact_region_size: i64,
-    ephemeral_next_id: i64,
+    // Session region sizes
+    session_kb_region_size: i64,
+    session_fact_region_size: i64,
+    session_next_id: i64,
 
     // Session metadata
     session_metadata: vlp_session,
@@ -948,7 +948,7 @@ struct vlp_snapshot_header {
 };
 ```
 
-Snapshot captures both global (session's view) and ephemeral state. Restore is bit-identical. Ephemeral IDs are preserved — the session continues exactly where it left off.
+Snapshot captures both global (session's view) and session state. Restore is bit-identical. Session IDs are preserved — the session continues exactly where it left off.
 
 ---
 
@@ -1008,7 +1008,7 @@ struct vlp_system_config {
     max_total_rules: i32,            // default 100,000
     max_total_terms: i64,            // default 1,000,000
     max_sessions_per_core: i32,      // default 500
-    max_ephemeral_kbs_per_session: i32,  // default 1000
+    max_session_kbs_per_session: i32,  // default 1000
 
     // Sessions
     default_max_turns: i32,          // default 0 (unlimited)
@@ -1041,16 +1041,16 @@ Identical to v0.1. ERR_CAT_DEVICE renamed to ERR_CAT_MEMORY (arena exhaustion in
 All 10 invariants from v0.1 hold, plus:
 
 ```
-INVARIANT_11: Ephemeral IDs never collide with global IDs.
-    All ephemeral IDs are negative. All global IDs are positive.
+INVARIANT_11: Session IDs never collide with global IDs.
+    All session IDs are negative. All global IDs are positive.
     The sign bit guarantees disjoint address spaces.
 
-INVARIANT_12: Ephemeral data dies with its session.
-    When a session is killed, its per-core arena region for ephemeral
-    data is reset. No ephemeral fact survives session death.
-    Ephemeral data referenced in global provenance becomes a dead link
+INVARIANT_12: Session data dies with its session.
+    When a session is killed, its per-core arena region for session
+    data is reset. No session fact survives session death.
+    Session data referenced in global provenance becomes a dead link
     (the reference persists but the data is gone — provenance records
-    that the derivation came from an ephemeral source).
+    that the derivation came from an session source).
 
 INVARIANT_13: Arena memory is never exhausted silently.
     Every arena allocation returns null on exhaustion.
@@ -1075,15 +1075,15 @@ vlp_numa.zig          — core detection, thread pinning, arena-per-core
 vlp_thread_pool.zig   — pinned threads, GEMM work distribution, atomic barrier
 vlp_ops.zig           — SIMD: gemm, dot, softmax, rmsnorm, attention, silu
 vlp_model.zig         — KB-based model loading, layer dispatch, forward pass
-vlp_kb_store.zig      — KB CRUD, fact/rule/term stores, path index, COW, ephemeral resolution
+vlp_kb_store.zig      — KB CRUD, fact/rule/term stores, path index, COW, session resolution
 vlp_prolog.zig        — unification, query, rule firing, backtracking
 vlp_grammar.zig       — template compile, render, inherit
-vlp_session.zig       — session lifecycle, ephemeral tree, clone/merge/kill
+vlp_session.zig       — session lifecycle, session tree, clone/merge/kill
 vlp_snapshot.zig      — save/restore, diff, merge, CRC32
 vlp_runner.zig        — poller, processor, internal, batch runners
 vlp_inference.zig     — full inference loop, L1/L2/L3, context assembly
 vlp_command.zig       — command parser, executor, KB/Prolog/grammar dispatch
-vlp_access.zig        — visibility check, ephemeral/global resolution
+vlp_access.zig        — visibility check, session/global resolution
 vlp_grant.zig         — grant CRUD, check, cleanup
 vlp_audit.zig         — ring buffer, query, filter
 vlp_confidence.zig    — assign, combine, chain, propagate
@@ -1103,10 +1103,10 @@ build.zig             — single native x86_64 target
 ```
 Stage 1: Foundation
     vlp_types, vlp_shared, vlp_arena, vlp_numa, vlp_thread_pool
-    vlp_kb_store (global + ephemeral), vlp_access
+    vlp_kb_store (global + session), vlp_access
     vlp_ops (scalar only, no SIMD yet)
-    Basic session with ephemeral tree
-    Deliverable: KBs with dual addressing, arena allocation, ephemeral writes.
+    Basic session with session tree
+    Deliverable: KBs with dual addressing, arena allocation, session writes.
     ~4,000 lines.
 
 Stage 2: Intelligence
@@ -1136,7 +1136,7 @@ Stage 4: Operations
 Stage 5: Testing
     vlp_test (full suite)
     Determinism, SIMD correctness, snapshot roundtrip,
-    ephemeral isolation, access control, confidence propagation.
+    session isolation, access control, confidence propagation.
     ~1,000 lines.
 
 Total: ~18,000 lines.
