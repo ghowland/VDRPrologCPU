@@ -4,9 +4,9 @@
 
 CPU SIMD branch of [VDR-LLM-Prolog](https://sireus.cloud/vdr-llm-prolog/). 
 
-- [VDR-LLM-Prolog project page](https://sireus.cloud/vdr-llm-prolog/) — Introduction, explanation, and all papers.
-- [Python vdr-math library](https://github.com/ghowland/vdr-math) — Scientific use of VDR. All math domains with exact integer results.
-- [Parked: GPU version of VDR-Prolog](https://github.com/ghowland/VDRProlog) — The GPU path (PTX/SPIR-V) is parked pending Zig nvptx64 toolchain fixes.
+- [VDR-LLM-Prolog project page](https://sireus.cloud/vdr-llm-prolog/), Introduction, explanation, and all papers.
+- [Python vdr-math library](https://github.com/ghowland/vdr-math), Scientific use of VDR. All math domains with exact integer results.
+- [Parked: GPU version of VDR-Prolog](https://github.com/ghowland/VDRProlog), The GPU path (PTX/SPIR-V) is parked pending Zig nvptx64 toolchain fixes.
 
 ---
 
@@ -16,11 +16,11 @@ A complete LLM inference and knowledge management system that runs on a single l
 
 The system combines three things that don't normally go together:
 
-1. **Exact integer LLM inference** — Q16 fixed-denominator rational arithmetic (D=65536) with two remainder slots. Softmax sums to D exactly, every time, on every device. No NaN, no Inf, no drift, no renormalization.
+1. **Exact integer LLM inference**, Q16 fixed-denominator rational arithmetic (D=65536) with two remainder slots. Softmax sums to D exactly, every time, on every device. No NaN, no Inf, no drift, no renormalization.
 
-2. **Prolog knowledge bases** — Structured data at integer addresses, queryable by unification, with confidence propagation, provenance tracking, and grant-gated access control. The LLM doesn't hold data in its context window — it issues 8-token commands to read/write KB addresses.
+2. **Prolog knowledge bases**, Structured data at integer addresses, queryable by unification, with confidence propagation, provenance tracking, and grant-gated access control. The LLM doesn't hold data in its context window, it issues 8-token commands to read/write KB addresses.
 
-3. **Self-reducing cost** — The LLM formalizes its judgments as Prolog rules. Next time the same pattern occurs, the rule fires without the LLM. At maturity, 93% of operations are zero-token Prolog rule firings (L3), not LLM forward passes (L1).
+3. **Self-reducing cost**, The LLM formalizes its judgments as Prolog rules. Next time the same pattern occurs, the rule fires without the LLM. At maturity, 93% of operations are zero-token Prolog rule firings (L3), not LLM forward passes (L1).
 
 ---
 
@@ -34,7 +34,7 @@ VDR-Prolog eliminates this entirely:
 - **Deterministic across runs.** Same input, same output, bit-for-bit, every time. Integer arithmetic has no rounding modes, no thread-ordering dependence, no platform variation.
 - **No failure modes from numerical instability.** No NaN propagation, no gradient explosion, no loss scaling, no denormal flushing.
 
-For diffusion models generating 120K+ frames, exact unity is not a nice-to-have — it's the difference between temporal coherence and accumulated drift.
+For diffusion models generating 120K+ frames, exact unity is not a nice-to-have, it's the difference between temporal coherence and accumulated drift.
 
 ---
 
@@ -57,11 +57,11 @@ Single Process, N+1 Arenas, Pinned Threads
 └────────────────────────────────────────────────────┘
 ```
 
-One process. Fixed-size arenas allocated at startup. No malloc after init. One thread per physical core, pinned for cache locality. All engine calls are direct function invocations — no bridge, no dispatch, no serialization.
+One process. Fixed-size arenas allocated at startup. No malloc after init. One thread per physical core, pinned for cache locality. All engine calls are direct function invocations, no bridge, no dispatch, no serialization.
 
 ---
 
-## ID System — Sign-Bit Partitioned Dual Addressing
+## ID System, Sign-Bit Partitioned Dual Addressing
 
 Every entity has a 64-bit ID. Bit 63 partitions the address space:
 
@@ -70,12 +70,12 @@ Every entity has a 64-bit ID. Bit 63 partitions the address space:
 | 0 | Global (positive) | Persistent, shared | `root.science.physics.qed` → UUID `+0x3A7F...` |
 | 1 | Ephemeral (negative) | Session-local, dies with session | `session_root.notes.hypothesis` → `-5` |
 
-**Dual addressing** — every KB is reachable two ways:
+**Dual addressing**, every KB is reachable two ways:
 
 - **Walk path:** `root.science.physics.qed.alpha_em` → `1.12.17.13.25` (tree traversal)
 - **Direct UUID:** Jump straight to `+0x3A7F...` (one hash lookup)
 
-**Ephemeral tree** — each LLM session gets a scratch tree at ID `-1`:
+**Ephemeral tree**, each LLM session gets a scratch tree at ID `-1`:
 
 ```
 session_root = -1
@@ -90,7 +90,7 @@ The LLM writes working notes to its ephemeral tree between turns. This is persis
 
 ---
 
-## Q16 — Exact Rational Arithmetic
+## Q16, Exact Rational Arithmetic
 
 ```
 Q16 { v: i32, r0: i16, r1: i16 }    // 8 bytes, two remainder slots
@@ -103,7 +103,7 @@ Every value is a fraction: `v/D` with remainders `r0` and `r1` tracking sub-quan
 |-----------|---------------|
 | Add | i64 widening, carry from r1→r0→v |
 | Multiply | i64 product, divTrunc by D, remainder to r0, cross-term remainder to r1 |
-| Compare | v first, then r0, then r1 — three-level exact ordering |
+| Compare | v first, then r0, then r1, three-level exact ordering |
 | Softmax | int_exp + normalize + FRU deficit assignment → sum = D exactly |
 
 SIMD: AVX2 processes 8 × i32 `v` fields simultaneously. `r0`/`r1` propagated in scalar post-pass when full precision is needed.
@@ -112,7 +112,7 @@ SIMD: AVX2 processes 8 × i32 `v` fields simultaneously. `r0`/`r1` propagated in
 
 ## Data Types
 
-### Fact — The Atomic Unit of Knowledge
+### Fact, The Atomic Unit of Knowledge
 
 ```
 Fact { tag, value: Q16, provenance: Provenance }
@@ -120,7 +120,7 @@ Fact { tag, value: Q16, provenance: Provenance }
 
 Tag classifies the data (value, text, reference, timestamp, boolean, vector, matrix, counter, etc.). Provenance tracks where the fact came from (source type, confidence as exact Q16 fraction, derivation rule, timestamp).
 
-### KB — The 256-Byte Knowledge Base Struct
+### KB, The 256-Byte Knowledge Base Struct
 
 Every KB is the same size (256 bytes, cache-line aligned). Contains:
 - Identity: UUID, parent ID, name, dotted path, walk ID
@@ -129,7 +129,7 @@ Every KB is the same size (256 bytes, cache-line aligned). Contains:
 - Children: subtree references, mount points
 - Metadata: visibility (public/internal/owner_only), frozen flag, owner, timestamps
 
-### Term — Prolog's Building Block
+### Term, Prolog's Building Block
 
 ```
 Term { type, primary_id, secondary_offset, secondary_aux, vdr_value: Q16 }
@@ -137,7 +137,7 @@ Term { type, primary_id, secondary_offset, secondary_aux, vdr_value: Q16 }
 
 Types: atom, variable, integer, VDR value, text, list, compound, vector, matrix, pair. 24 bytes each.
 
-### Rule — Head :- Body → Actions
+### Rule, Head :- Body → Actions
 
 Rules match against facts via unification. When all body conditions are satisfied, the rule fires and applies its actions (assert/retract facts). Rules track their own statistics: fire count, success rate, last fired timestamp.
 
@@ -161,7 +161,7 @@ Every fact carries a confidence as an exact Q16 fraction:
 
 Agreeing sources combine: `1 - ∏(1 - C_i)`. Two sources at 95% → 99.75%. Exact integer arithmetic, no float.
 
-Confidence chains through derivation: if fact A (95%) derives fact B, B's confidence is 95%. Three-link chain at 85% each: `(55705/65536)³` — exact Q16.
+Confidence chains through derivation: if fact A (95%) derives fact B, B's confidence is 95%. Three-link chain at 85% each: `(55705/65536)³`, exact Q16.
 
 ---
 
@@ -204,7 +204,7 @@ Weights stored as i16 (2 bytes per parameter). 1B parameters = 2 GB. Fits in lap
 
 ---
 
-## Memory Model — Arenas Only
+## Memory Model, Arenas Only
 
 All memory allocated at startup. No malloc after init. No free until shutdown.
 
@@ -218,7 +218,7 @@ Fits in 16 GB laptop with room for OS. Bump-pointer allocation: O(1) alloc, O(1)
 
 ---
 
-## Compute — CPU SIMD (AVX2)
+## Compute, CPU SIMD (AVX2)
 
 Target: 1B parameter model, 16 layers, d_model=2048, 16 heads.
 
@@ -229,7 +229,7 @@ GEMM is the bottleneck. Per token: ~640M multiply-accumulates across 16 layers.
 | 1 | ~24 GMAC/s | ~27 ms | ~37 |
 | 8 | ~192 GMAC/s | ~3.3 ms | ~300 |
 
-GEMM rows split across cores. Atomic barrier synchronization between layers. No mutex, no condition variable — spin on atomic for microsecond-scale waits.
+GEMM rows split across cores. Atomic barrier synchronization between layers. No mutex, no condition variable, spin on atomic for microsecond-scale waits.
 
 At L3 steady state (93% of operations), most work skips the forward pass entirely. Effective throughput is much higher than raw tok/s.
 
@@ -239,7 +239,7 @@ At L3 steady state (93% of operations), most work skips the forward pass entirel
 
 One thread per physical core, pinned via OS affinity. Each thread owns its per-core arena. Session assigned to a core at creation; all session work runs on that core's thread using that core's arena.
 
-GEMM parallelized: all cores contribute rows, synchronize via atomic counter per layer. NUMA alignment via first-touch policy — each pinned thread touches its arena pages at init, ensuring local memory placement on multi-socket systems. On single-socket laptops, this still helps cache locality.
+GEMM parallelized: all cores contribute rows, synchronize via atomic counter per layer. NUMA alignment via first-touch policy, each pinned thread touches its arena pages at init, ensuring local memory placement on multi-socket systems. On single-socket laptops, this still helps cache locality.
 
 ---
 
@@ -256,27 +256,27 @@ Operations that touch the outside world (filesystem, network, process execution)
 | network | HTTP fetch, API calls |
 | process | Process management |
 
-Grants are integer-checked: user_id + grant_class + target pattern + expiry + use count. Every check writes an audit entry. No heuristics, no LLM evaluation, no prompt injection vector. The LLM doesn't execute the check — the system does.
+Grants are integer-checked: user_id + grant_class + target pattern + expiry + use count. Every check writes an audit entry. No heuristics, no LLM evaluation, no prompt injection vector. The LLM doesn't execute the check, the system does.
 
 ---
 
 ## Access Control
 
-Data is **absent**, not filtered. A query from a session without access to KB X returns zero results from X. The query path never touches X's data. This is structural — the access check runs before data is read, not after.
+Data is **absent**, not filtered. A query from a session without access to KB X returns zero results from X. The query path never touches X's data. This is structural, the access check runs before data is read, not after.
 
-Visibility levels: public (anyone), internal (authenticated), owner_only (creator). Visibility walks the parent chain — an owner_only KB inside a public tree is still owner_only. A public KB inside an owner_only tree is invisible because the ancestor is unreachable.
+Visibility levels: public (anyone), internal (authenticated), owner_only (creator). Visibility walks the parent chain, an owner_only KB inside a public tree is still owner_only. A public KB inside an owner_only tree is invisible because the ancestor is unreachable.
 
 ---
 
 ## Audit
 
-Every access check, grant check, fact assertion, fact retraction, rule firing, session creation, session destruction, and operational execution produces an audit entry. Ring buffer, fixed size, oldest overwritten. All entries are integers — filterable by session, user, action, KB, time range, result.
+Every access check, grant check, fact assertion, fact retraction, rule firing, session creation, session destruction, and operational execution produces an audit entry. Ring buffer, fixed size, oldest overwritten. All entries are integers, filterable by session, user, action, KB, time range, result.
 
 ---
 
 ## Snapshot & Clone
 
-Snapshots capture session state (global view + ephemeral tree) as a contiguous binary blob. CRC32 checksum. Restore is bit-identical — the session continues exactly where it left off, including ephemeral IDs.
+Snapshots capture session state (global view + ephemeral tree) as a contiguous binary blob. CRC32 checksum. Restore is bit-identical, the session continues exactly where it left off, including ephemeral IDs.
 
 Clone creates a new session sharing the parent's data via copy-on-write. First write triggers page copy. Kill clone → COW pages freed, parent untouched. Merge clone → dirty pages applied to parent with conflict detection.
 
@@ -285,30 +285,30 @@ Clone creates a new session sharing the parent's data via copy-on-write. First w
 ## Project Files
 
 ```
-vdr_types.zig         — All types: Q16, VdrId, Fact, KB, Term, Rule, Session, etc.
-vdr_shared.zig        — Constants, D, exp table, enums
-vdr_arena.zig         — Fixed-size arena allocator
-vdr_numa.zig          — Core detection, thread pinning
-vdr_thread_pool.zig   — Pinned threads, GEMM work distribution
-vdr_ops.zig           — SIMD: gemm, dot, softmax, rmsnorm, attention, silu
-vdr_model.zig         — KB-based model loading, forward pass
-vdr_kb_store.zig      — KB CRUD, dual addressing, ephemeral resolution
-vdr_prolog.zig        — Unification, query, rule firing
-vdr_grammar.zig       — Template compile, render, inherit
-vdr_session.zig       — Session lifecycle, ephemeral tree, clone/merge
-vdr_snapshot.zig      — Save/restore, diff, merge
-vdr_runner.zig        — Poller, processor, internal, batch runners
-vdr_inference.zig     — Full inference loop, L1/L2/L3
-vdr_command.zig       — Command parser, executor
-vdr_access.zig        — Visibility check, ephemeral/global resolution
-vdr_grant.zig         — Grant CRUD, check, cleanup
-vdr_audit.zig         — Ring buffer, query, filter
-vdr_confidence.zig    — Assign, combine, chain, propagate
-vdr_seed.zig          — Seed layer init, model weight KB creation
-vdr_builtin.zig       — 448 builtins, IOSE validation
-vdr_system.zig        — Top-level init
-vdr_test.zig          — Determinism, roundtrip, isolation tests
-build.zig             — Single native x86_64 target
+vdr_types.zig        , All types: Q16, VdrId, Fact, KB, Term, Rule, Session, etc.
+vdr_shared.zig       , Constants, D, exp table, enums
+vdr_arena.zig        , Fixed-size arena allocator
+vdr_numa.zig         , Core detection, thread pinning
+vdr_thread_pool.zig  , Pinned threads, GEMM work distribution
+vdr_ops.zig          , SIMD: gemm, dot, softmax, rmsnorm, attention, silu
+vdr_model.zig        , KB-based model loading, forward pass
+vdr_kb_store.zig     , KB CRUD, dual addressing, ephemeral resolution
+vdr_prolog.zig       , Unification, query, rule firing
+vdr_grammar.zig      , Template compile, render, inherit
+vdr_session.zig      , Session lifecycle, ephemeral tree, clone/merge
+vdr_snapshot.zig     , Save/restore, diff, merge
+vdr_runner.zig       , Poller, processor, internal, batch runners
+vdr_inference.zig    , Full inference loop, L1/L2/L3
+vdr_command.zig      , Command parser, executor
+vdr_access.zig       , Visibility check, ephemeral/global resolution
+vdr_grant.zig        , Grant CRUD, check, cleanup
+vdr_audit.zig        , Ring buffer, query, filter
+vdr_confidence.zig   , Assign, combine, chain, propagate
+vdr_seed.zig         , Seed layer init, model weight KB creation
+vdr_builtin.zig      , 448 builtins, IOSE validation
+vdr_system.zig       , Top-level init
+vdr_test.zig         , Determinism, roundtrip, isolation tests
+build.zig            , Single native x86_64 target
 ```
 
 ---
@@ -336,9 +336,9 @@ These hold at all times, in all states. Violation is a bug.
 
 ## Status
 
-**src/vdr_types.zig** — Complete. All structs with defaults.
+**src/vdr_types.zig**, Complete. All structs with defaults.
 
-Everything else — pending implementation.
+Everything else, pending implementation.
 
 GPU path (PTX/SPIR-V) parked at [VDR-Prolog](https://github.com/ghowland/VDRProlog) pending Zig 0.16.0 nvptx64 toolchain fixes.
 
