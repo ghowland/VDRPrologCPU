@@ -1667,9 +1667,12 @@ pub const RelationType = enum(i32) {
     bounded_by, // Algorithms: X has Y as a proven performance bound
     simplifies, // Engineering/DS: X reduces complexity or difficulty of Y
     maintains, // Engineering/DS: X preserves or upholds Y across operations
-
+    reverses, // General: X undoes or restores the state that Y produced
+    alternative_to, // General: X can substitute for Y in same functional role with different trade-offs; symmetric
+    hazard_of, // General: X is a danger or risk to an agent arising from performing Y
+    indicates, // General: X is an observable signal or marker that reveals the state/presence of Y
     develops, // Athletics/Education: X progressively builds Y through repeated application
-    // complements, // General: X and Y work cooperatively, each providing what the other lacks; symmetric
+    complements, // General: X and Y work cooperatively, each providing what the other lacks; symmetric
     models, // Science/Theory: X provides theoretical/mathematical framework representing Y
     founded, // History/Philosophy: X historically established or originated Y
     opposes, // Philosophy/Biology: X holds positions or functions contrary to Y
@@ -1742,7 +1745,7 @@ pub const RelationType = enum(i32) {
     selects, // Grammar: X determines which form Y takes
     modifies, // Grammar: X restricts or describes Y
     heads, // Grammar: X is the obligatory central word of phrase Y
-    complements, // Grammar: X completes the meaning of head Y
+    complements_grammar, // Grammar: X completes the meaning of head Y
     subcategorizes, // Grammar: head X requires complement type Y
     distributes_as, // Grammar: phrase X occupies same positions as category Y
 
@@ -1812,9 +1815,11 @@ pub const RelationType = enum(i32) {
             .bounded_by => .unknown, // "bounds" is query reversal
             .simplifies => .unknown, // "simplified_by" is query reversal
             .maintains => .unknown, // "maintained_by" is query reversal
+            .input_to, // General: X is consumed or incorporated as feedstock by process Y
 
             // Identity and binding
-            .instance_of => .has_type,
+            .instance_of,
+            => .has_type,
             .has_type => .instance_of,
             .named => .unknown, // "name_of" is query reversal
             .aliases => .aliases, // symmetric
