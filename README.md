@@ -2,8 +2,6 @@
 
 **Exact integer LLM inference + Prolog knowledge system. CPU only. No GPU. No floats. No malloc after init.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
 ---
 
 ## What This Is
@@ -336,4 +334,4 @@ src/
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License.
