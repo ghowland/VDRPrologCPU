@@ -1618,103 +1618,111 @@ pub const ScratchpadEntry = struct {
 
 pub const RelationType = enum(i32) {
     // Structural (1000+)
-    enables = 1000, // X makes Y possible or functional
-    requires, // X cannot exist or work without Y
-    prevents, // X blocks or forbids Y; symmetric
-    implements, // X is a concrete realization of abstract Y
-    extends, // X adds capability to Y without replacing
-    overrides, // X replaces Y's behavior in a scope
-    validates, // X confirms Y is correct
-    verified_by, // Y was confirmed by X
-    contradicts, // X and Y cannot both hold; symmetric
-    causes, // X directly produces Y as effect
-    determined_by, // Y's value or form is strictly fixed by X
-    depends_on, // X needs Y to function
-    equivalent_to, // X and Y are interchangeable; symmetric
-    approximates, // X and Y are close but not identical; symmetric
-    specializes, // X is a more specific form of Y
-    generalizes, // X is a more general form of Y
-    part_of, // X is a component inside Y
-    contains, // Y is a component inside X
-    follows, // X comes after Y in sequence
-    precedes, // X comes before Y in sequence
-    forces, // disruption/pressure compels response/adaptation
-    overcomes, // removes or breaks an active constraint
-    triggered_by, // Y initiated X but doesn't fully determine it
-    explains, // mechanism/theory accounts for observed phenomenon
-    replaces, // X supersedes Y in same functional role
-    motivates, // failure/anomaly provides impetus for new development
-    limits, // reveals boundary or incompleteness of
-    confers, // grants a property or capability to
-    unifies, // integrates previously separate entities into single framework
-    foundation_for, // provides axiomatic ground from which Y is built
-    constrains, // imposes limitation or restriction on Y
+    enables = 1000, // General: X makes Y possible or functional
+    requires, // General: X cannot exist or work without Y
+    prevents, // General: X blocks or forbids Y; symmetric
+    implements, // Programming: X is a concrete realization of abstract Y
+    extends, // General: X adds capability to Y without replacing
+    overrides, // Programming: X replaces Y's behavior in a scope
+    validates, // General: X confirms Y is correct
+    verified_by, // General: Y was confirmed by X
+    contradicts, // General: X and Y cannot both hold; symmetric
+    causes, // History/Physics: X directly produces Y as effect
+    determined_by, // Physics: Y's value or form is strictly fixed by X
+    depends_on, // General: X needs Y to function
+    equivalent_to, // General: X and Y are interchangeable; symmetric
+    approximates, // Physics/Math: X and Y are close but not identical; symmetric
+    specializes, // General: X is a more specific form of Y
+    generalizes, // General: X is a more general form of Y
+    part_of, // General: X is a component inside Y
+    contains, // General: Y is a component inside X
+    follows, // General: X comes after Y in sequence
+    precedes, // General: X comes before Y in sequence
+    forces, // History: disruption/pressure compels response/adaptation
+    overcomes, // History: removes or breaks an active constraint
+    triggered_by, // History: Y initiated X but doesn't fully determine it
+    explains, // Physics/History: mechanism accounts for observed phenomenon
+    replaces, // History/Programming: X supersedes Y in same functional role
+    motivates, // Physics: failure/anomaly provides impetus for new development
+    limits, // Physics: reveals boundary or incompleteness of
+    confers, // Physics: grants a property or capability to
+    unifies, // Physics: integrates separate entities into single framework
+    foundation_for, // Math: provides axiomatic ground from which Y is built
+    constrains, // Math: imposes limitation or restriction on Y
 
     // Identity and binding (2000+)
-    instance_of = 2000, // X is a particular case of Y
-    has_type, // X has type Y
-    named, // X has the name Y
-    aliases, // X is an alternative identifier for Y; symmetric
-    references, // X points to or cites Y
-    assigns, // X gives value Y in a binding context
-    binds_to, // X is bound to Y in a scope
-    returns, // X produces Y as output
-    accepts, // X takes Y as input
-    emits, // X produces Y as a side output
-    complement_of, // X is the set-theoretic complement of Y within a scope; symmetric
-    constructed_from, // X is formally built using Y as axioms/definitions/method
+    instance_of = 2000, // General: X is a particular case of Y
+    has_type, // Programming: X has type Y
+    named, // General: X has the name Y
+    aliases, // General: X is an alternative identifier for Y; symmetric
+    references, // General: X points to or cites Y
+    assigns, // Programming: X gives value Y in a binding context
+    binds_to, // Programming: X is bound to Y in a scope
+    returns, // Programming: X produces Y as function output
+    accepts, // Programming: X takes Y as input parameter
+    emits, // Programming: X produces Y as a side output
+    complement_of, // Math: X is the set-theoretic complement of Y; symmetric in scope
+    constructed_from, // Math: X is formally built using Y as axioms/definitions
 
     // Knowledge structure (3000+)
-    knowledge_base = 3000, // X is stored in knowledge base Y
-    domain, // X belongs to domain Y
-    scoped_to, // X is valid only within scope Y
-    context_of, // X is the broader situation Y occurs within
-    defined_in, // X is defined in source Y
-    documented_by, // X is documented by Y
-    example_of, // X is an example of Y
-    derived_from, // X is derived from source Y
-    composed_of, // X is structurally built from parts Y
-    decomposes_to, // X breaks down into components Y
-    transforms_to, // X becomes Y through a defined operation
-    measured_by, // X is quantified by measurement Y
-    studies, // field X has Y as its subject matter
-    distinguishes, // criterion X separates Y into distinct categories
+    knowledge_base = 3000, // VDR: X is stored in knowledge base Y
+    domain, // General: X belongs to domain Y
+    scoped_to, // Programming: X is valid only within scope Y
+    context_of, // General: X is the broader situation Y occurs within
+    defined_in, // General: X is defined in source Y
+    documented_by, // General: X is documented by Y
+    example_of, // General: X is an example of Y
+    derived_from, // General: X is derived from source Y
+    composed_of, // General: X is structurally built from parts Y
+    decomposes_to, // General: X breaks down into components Y
+    transforms_to, // General: X becomes Y through a defined operation
+    measured_by, // Physics: X is quantified by measurement Y
+    studies, // Math: field X has Y as its subject matter
+    distinguishes, // General: criterion X separates Y into distinct categories
+    anti_pattern_of, // Programming: X is a common misuse or failure mode of Y
 
     // Agency and action (4000+)
-    agent_of = 4000, // X is the agent performing action Y
-    object_of, // X is the object receiving action Y
-    instrument_of, // X is the tool used in action Y
-    location_of, // X is where Y occurs
-    destination_of, // X is where Y is directed toward
-    source_of, // X is where Y originates from
-    purpose_of, // X is the reason for Y
-    result_of, // X is the outcome of Y
-    manner_of, // X describes how Y is performed
-    time_of, // X is when Y occurs
+    agent_of = 4000, // Language: X is the agent performing action Y
+    object_of, // Language: X is the object receiving action Y
+    instrument_of, // Language: X is the tool used in action Y
+    location_of, // Language: X is where Y occurs
+    destination_of, // Language: X is where Y is directed toward
+    source_of, // Language: X is where Y originates from
+    purpose_of, // Language: X is the reason for Y
+    result_of, // Language: X is the outcome of Y
+    manner_of, // Language: X describes how Y is performed
+    time_of, // Language: X is when Y occurs
 
     // Condition and logic (5000+)
-    if_then = 5000, // if X holds then Y follows
-    unless, // Y holds unless X is true
-    while_true, // Y continues while X holds
-    for_each, // Y applies to each instance of X
-    exists, // at least one X satisfies Y
-    not_exists, // no X satisfies Y
-    and_also, // both X and Y hold
-    or_else, // X or Y holds (inclusive)
-    greater_than, // X > Y in ordered comparison
-    less_than, // X < Y in ordered comparison
+    if_then = 5000, // Logic: if X holds then Y follows
+    unless, // Logic: Y holds unless X is true
+    while_true, // Logic: Y continues while X holds
+    for_each, // Logic: Y applies to each instance of X
+    exists, // Logic: at least one X satisfies Y
+    not_exists, // Logic: no X satisfies Y
+    and_also, // Logic: both X and Y hold
+    or_else, // Logic: X or Y holds (inclusive)
+    greater_than, // Logic: X > Y in ordered comparison
+    less_than, // Logic: X < Y in ordered comparison
 
     // Grammar and language structure (6000+)
-    governs = 6000, // X dictates the form of Y
-    applies_to, // rule X is relevant to class Y
-    violates, // anti-pattern X breaks rule Y
-    agrees_with, // X matches Y in grammatical features
-    selects, // X determines which form Y takes
-    modifies, // X restricts or describes Y
-    heads, // X is the obligatory central word of phrase Y
-    complements, // X completes the meaning of head Y
-    subcategorizes, // head X requires complement type Y
-    distributes_as, // phrase X occupies same positions as category Y
+    governs = 6000, // Grammar: X dictates the form of Y
+    applies_to, // Grammar: rule X is relevant to class Y
+    violates, // Grammar: anti-pattern X breaks rule Y
+    agrees_with, // Grammar: X matches Y in grammatical features
+    selects, // Grammar: X determines which form Y takes
+    modifies, // Grammar: X restricts or describes Y
+    heads, // Grammar: X is the obligatory central word of phrase Y
+    complements, // Grammar: X completes the meaning of head Y
+    subcategorizes, // Grammar: head X requires complement type Y
+    distributes_as, // Grammar: phrase X occupies same positions as category Y
+
+    // Toolchain and operations (7000+)
+    manages = 7000, // Programming: X is responsible for lifecycle/state of Y
+    isolates, // Programming: X creates boundary separating Y from interference
+    orchestrates, // Programming: X coordinates execution of Y components
+    generates, // Programming: X produces Y as a primary artifact
+    inspects, // Programming: X examines state of Y without modifying it
 
     // Domain-registerable (10000 to 20000)
     domain_0 = 1_000_000,
