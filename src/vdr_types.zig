@@ -1777,6 +1777,7 @@ pub const RelationType = enum(i32) {
             .contradicts => .contradicts, // symmetric
             .causes => .result_of,
             .determined_by => .unknown, // forward "determines" handled by query reversal
+            .indicates => .determined_by, // indicates inverse is determined by, but not the reverse
             .depends_on => .enables,
             .equivalent_to => .equivalent_to, // symmetric
             .approximates => .approximates, // symmetric
