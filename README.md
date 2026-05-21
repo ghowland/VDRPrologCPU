@@ -2,10 +2,11 @@
 
 **Exact integer LLM inference + Prolog knowledge system on laptop hardware**
 
-CPU SIMD branch of [VDR-Prolog](https://github.com/ghowland/VDRProlog). The GPU path (PTX/SPIR-V) is parked pending Zig nvptx64 toolchain fixes. This repo targets x86_64 AVX2, arena-only memory, NUMA-aligned threads, zero floating point.
+CPU SIMD branch of [VDR-LLM-Prolog](https://sireus.cloud/vdr-llm-prolog/). 
 
 - [VDR-LLM-Prolog project page](https://sireus.cloud/vdr-llm-prolog/)
-- [Python vdr-math library](https://github.com/ghowland/vdr-math)
+- [Python vdr-math library](https://github.com/ghowland/vdr-math) - Scientific use of VDR.  All math domains with exact integer results.
+- [Parked: GPU version of VDR-LLM-Prolog](https://github.com/ghowland/VDRProlog) - The GPU path (PTX/SPIR-V) is parked pending Zig nvptx64 toolchain fixes. This repo targets x86_64 AVX2, arena-only memory, NUMA-aligned threads, zero floating point.
 
 ---
 
