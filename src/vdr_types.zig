@@ -1668,6 +1668,17 @@ pub const RelationType = enum(i32) {
     simplifies, // Engineering/DS: X reduces complexity or difficulty of Y
     maintains, // Engineering/DS: X preserves or upholds Y across operations
 
+    develops, // Athletics/Education: X progressively builds Y through repeated application
+    // complements, // General: X and Y work cooperatively, each providing what the other lacks; symmetric
+    models, // Science/Theory: X provides theoretical/mathematical framework representing Y
+    founded, // History/Philosophy: X historically established or originated Y
+    opposes, // Philosophy/Biology: X holds positions or functions contrary to Y
+    responds_to, // Philosophy: X directly addresses or answers Y's arguments
+    critiques, // Philosophy: X identifies problems or weaknesses in Y through argument
+    synthesizes, // Philosophy: X combines elements from multiple Y into new framework
+    transmits, // History: X conveys Y to a new context or tradition without fundamentally altering
+    parallel_to, // Philosophy: X and Y are structurally similar but independently arising; symmetric
+
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
     has_type, // Programming: X has type Y
@@ -1751,41 +1762,183 @@ pub const RelationType = enum(i32) {
 
     pub fn inverse(self: RelationType) RelationType {
         return switch (self) {
+            // Structural — symmetric pairs and directional inverses
             .enables => .depends_on,
             .requires => .enables,
-            .prevents => .prevents,
+            .prevents => .prevents, // symmetric
+            .implements => .unknown, // no clean inverse; "implemented_by" is query direction
             .extends => .generalizes,
-            .overrides => .unknown,
+            .overrides => .unknown, // context-dependent; no stable inverse
             .validates => .verified_by,
             .verified_by => .validates,
-            .contradicts => .contradicts,
-            .causes => .determined_by,
-            .determined_by => .causes,
+            .contradicts => .contradicts, // symmetric
+            .causes => .result_of,
+            .determined_by => .unknown, // forward "determines" handled by query reversal
             .depends_on => .enables,
-            .equivalent_to => .equivalent_to,
-            .approximates => .approximates,
+            .equivalent_to => .equivalent_to, // symmetric
+            .approximates => .approximates, // symmetric
             .specializes => .generalizes,
             .generalizes => .specializes,
             .part_of => .contains,
             .contains => .part_of,
             .follows => .precedes,
             .precedes => .follows,
-            .instance_of => .knowledge_base,
-            .knowledge_base => .instance_of,
-            else => .unknown,
+            .forces => .unknown, // "forced_by" not distinct enough from triggered_by
+            .overcomes => .unknown, // no clean inverse
+            .triggered_by => .causes, // weak: triggering is a form of causing
+            .explains => .unknown, // "explained_by" is query reversal, not a distinct type
+            .replaces => .unknown, // "replaced_by" is query reversal
+            .motivates => .unknown, // "motivated_by" is query reversal
+            .limits => .unknown, // "limited_by" is query reversal
+            .confers => .unknown, // "conferred_by" is query reversal
+            .unifies => .part_of, // weak: unified things are parts of the unification
+            .foundation_for => .constructed_from,
+            .constrains => .unknown, // "constrained_by" is query reversal
+            .produces => .result_of,
+            .spans => .unknown, // no clean inverse; "spanned_by" is query reversal
+            .borders => .borders, // symmetric
+            .influences => .unknown, // "influenced_by" is query reversal
+            .amplifies => .unknown, // "amplified_by" is query reversal
+            .regulates => .unknown, // "regulated_by" is query reversal
+            .supplies => .unknown, // "supplied_by" is query reversal
+            .flows_to => .unknown, // "receives_from" not distinct enough
+            .activates => .unknown, // "activated_by" is query reversal
+            .encoded_by => .unknown, // forward "encodes" is query reversal
+            .mediates => .unknown, // "mediated_by" is query reversal
+            .mitigated_by => .unknown, // forward "mitigates" is query reversal
+            .degrades => .unknown, // "degraded_by" is query reversal
+            .favors => .unknown, // "favored_by" is query reversal
+            .solves => .unknown, // "solved_by" is query reversal
+            .bounded_by => .unknown, // "bounds" is query reversal
+            .simplifies => .unknown, // "simplified_by" is query reversal
+            .maintains => .unknown, // "maintained_by" is query reversal
+
+            // Identity and binding
+            .instance_of => .has_type,
+            .has_type => .instance_of,
+            .named => .unknown, // "name_of" is query reversal
+            .aliases => .aliases, // symmetric
+            .references => .unknown, // "referenced_by" is query reversal
+            .assigns => .unknown, // "assigned_from" not distinct
+            .binds_to => .unknown, // "bound_by" is query reversal
+            .returns => .unknown, // "returned_by" is query reversal
+            .accepts => .unknown, // "accepted_by" is query reversal
+            .emits => .unknown, // "emitted_by" is query reversal
+            .complement_of => .complement_of, // symmetric
+            .constructed_from => .foundation_for,
+
+            // Knowledge structure
+            .knowledge_base => .unknown, // "stored_in" is query reversal
+            .domain => .unknown, // "has_member" is query reversal
+            .scoped_to => .contains, // scope contains the scoped thing
+            .context_of => .scoped_to, // weak: context contains, scoped thing lives in context
+            .defined_in => .contains, // definition source contains the defined thing
+            .documented_by => .unknown, // "documents" is query reversal
+            .example_of => .unknown, // "has_example" is query reversal
+            .derived_from => .unknown, // "derives" is query reversal
+            .composed_of => .decomposes_to,
+            .decomposes_to => .composed_of,
+            .transforms_to => .derived_from, // weak: transformed thing derives from source
+            .measured_by => .unknown, // "measures" is query reversal
+            .studies => .unknown, // "studied_by" is query reversal
+            .distinguishes => .unknown, // "distinguished_by" is query reversal
+            .anti_pattern_of => .unknown, // "has_anti_pattern" is query reversal
+
+            // Agency and action
+            .agent_of => .unknown, // "has_agent" is query reversal
+            .object_of => .unknown, // "has_object" is query reversal
+            .instrument_of => .unknown, // "has_instrument" is query reversal
+            .location_of => .unknown, // "located_at" is query reversal
+            .destination_of => .source_of,
+            .source_of => .destination_of,
+            .purpose_of => .unknown, // "has_purpose" is query reversal
+            .result_of => .causes,
+            .manner_of => .unknown, // "has_manner" is query reversal
+            .time_of => .unknown, // "occurs_at" is query reversal
+
+            // Condition and logic — no inverses; these are logical operators
+            .if_then => .unknown,
+            .unless => .unknown,
+            .while_true => .unknown,
+            .for_each => .unknown,
+            .exists => .unknown,
+            .not_exists => .unknown,
+            .and_also => .and_also, // symmetric
+            .or_else => .or_else, // symmetric
+            .greater_than => .less_than,
+            .less_than => .greater_than,
+
+            // Grammar and language structure
+            .governs => .unknown, // "governed_by" is query reversal
+            .applies_to => .unknown, // "has_rule" is query reversal
+            .violates => .unknown, // "violated_by" is query reversal
+            .agrees_with => .agrees_with, // symmetric
+            .selects => .unknown, // "selected_by" is query reversal
+            .modifies => .unknown, // "modified_by" is query reversal
+            .heads => .unknown, // "headed_by" is query reversal
+            .complements => .unknown, // "complemented_by" is query reversal
+            .subcategorizes => .unknown, // "subcategorized_by" is query reversal
+            .distributes_as => .unknown, // "distribution_of" is query reversal
+
+            // Toolchain and operations
+            .manages => .unknown, // "managed_by" is query reversal
+            .isolates => .unknown, // "isolated_by" is query reversal
+            .orchestrates => .unknown, // "orchestrated_by" is query reversal
+            .generates => .derived_from, // generated thing derives from generator
+            .inspects => .unknown, // "inspected_by" is query reversal
+
+            .develops => .unknown, // "developed_by" is query reversal
+            .complements => .complements, // symmetric
+            .models => .unknown, // "modeled_by" is query reversal
+            .founded => .unknown, // "founded_by" is query reversal
+            .opposes => .opposes, // typically mutual but assert both directions in compaction
+            .responds_to => .unknown, // "responded_to_by" is query reversal
+            .critiques => .unknown, // "critiqued_by" is query reversal
+            .synthesizes => .unknown, // "synthesized_by" is query reversal
+            .transmits => .unknown, // "transmitted_by" is query reversal
+            .parallel_to => .parallel_to, // symmetric
+
+            // Domain-registerable and unknown
+            .unknown => .unknown,
+            else => .unknown, // domain-registered types: inverse defined in DomainRelationDef
         };
     }
 
     pub fn isSymmetric(self: RelationType) bool {
         return switch (self) {
-            .prevents, .contradicts, .equivalent_to, .approximates => true,
+            .prevents,
+            .contradicts,
+            .equivalent_to,
+            .approximates,
+            .borders,
+            .aliases,
+            .complement_of,
+            .agrees_with,
+            .and_also,
+            .or_else,
+            .complements,
+            .parallel_to,
+            .opposes,
+            => true,
             else => false,
         };
     }
 
     pub fn isTransitive(self: RelationType) bool {
         return switch (self) {
-            .enables, .requires, .extends, .specializes, .generalizes, .part_of, .contains, .follows, .precedes, .depends_on => true,
+            .enables,
+            .requires,
+            .extends,
+            .specializes,
+            .generalizes,
+            .part_of,
+            .contains,
+            .follows,
+            .precedes,
+            .depends_on,
+            .scoped_to,
+            .flows_to,
+            => true,
             else => false,
         };
     }
