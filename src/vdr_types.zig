@@ -220,14 +220,115 @@ pub const Provenance = struct {
     }
 };
 
+// ============================================================
+// GEMM Cache — contiguous, cache-line aligned, per-KB
+// Rebuilt on demand from Facts. Ephemeral in scratch arena.
+// ============================================================
+
+pub const CACHE_LINE: usize = 64;
+
+pub const GemmCache = struct {
+    v_packed: []i32 = &.{}, // contiguous v fields, SIMD-ready
+    fact_count: i32 = 0, // entries in cache
+    kb_id: VdrId = .{}, // source KB
+    kb_last_modified: i32 = 0, // timestamp at rebuild
+    generation: i32 = 0, // increments on rebuild
+
+    pub fn isDirty(self: GemmCache, kb_modified: i32) bool {
+        return kb_modified > self.kb_last_modified;
+    }
+};
+
+// ============================================================
+// Weight Matrix — SoA packed, cache-line aligned per array
+// Referenced by TAG_MATRIX Facts. GEMM reads v directly.
+// ============================================================
+
+pub const WeightMatrix = struct {
+    v: []i32 = &.{}, // values, contiguous, GEMM-ready
+    r0: []i16 = &.{}, // remainder level 0
+    r1: []i16 = &.{}, // remainder level 1
+    rows: i32 = 0,
+    cols: i32 = 0,
+
+    pub fn elementCount(self: WeightMatrix) i64 {
+        return @as(i64, self.rows) * @as(i64, self.cols);
+    }
+
+    pub fn bytesV(self: WeightMatrix) i64 {
+        return self.elementCount() * 4;
+    }
+
+    pub fn bytesTotal(self: WeightMatrix) i64 {
+        return self.elementCount() * 8; // v:4 + r0:2 + r1:2
+    }
+};
+
+// ============================================================
+// Fact — the atomic unit of knowledge
+// 48 bytes. Tag determines interpretation of value field.
+// TAG_MATRIX/TAG_VECTOR facts reference WeightMatrix/WeightVector.
+// ============================================================
+
 pub const Fact = struct {
     tag: FactTag = .empty,
     value: Q16 = .{},
     provenance: Provenance = .{},
 
+    // Matrix/vector reference — used when tag is TAG_MATRIX or TAG_VECTOR
+    // value.v = index into KB's matrix_refs or vector_refs array
+    // value.r0 = unused (0)
+    // value.r1 = unused (0)
+    // Dimensions and data pointers live in the referenced WeightMatrix/WeightVector.
+
     pub fn isEmpty(self: Fact) bool {
         return self.tag == .empty;
     }
+
+    pub fn isMatrix(self: Fact) bool {
+        return self.tag == .matrix;
+    }
+    pub fn isVector(self: Fact) bool {
+        return self.tag == .vector;
+    }
+
+    pub fn matrixRefIndex(self: Fact) i32 {
+        return self.value.v;
+    }
+};
+
+// ============================================================
+// Weight Vector — 1D version of WeightMatrix
+// Same SoA layout, cache-line aligned.
+// ============================================================
+
+pub const WeightVector = struct {
+    v: []i32 = &.{},
+    r0: []i16 = &.{},
+    r1: []i16 = &.{},
+    length: i32 = 0,
+
+    pub fn bytes(self: WeightVector) i64 {
+        return @as(i64, self.length) * 8;
+    }
+};
+
+// ============================================================
+// KB extension — matrix/vector ref tables
+// Each KB can hold references to its weight data.
+// ============================================================
+
+pub const KbWeightRefs = struct {
+    matrix_refs: []WeightMatrix = &.{},
+    matrix_count: i32 = 0,
+    matrix_capacity: i32 = 0,
+
+    vector_refs: []WeightVector = &.{},
+    vector_count: i32 = 0,
+    vector_capacity: i32 = 0,
+
+    // Per-KB GEMM cache for non-matrix fact data
+    gemm_cache: ?GemmCache = null,
 };
 
 pub const KB = struct {
