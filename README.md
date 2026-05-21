@@ -4,6 +4,9 @@
 
 CPU SIMD branch of [VDR-Prolog](https://github.com/ghowland/VDRProlog). The GPU path (PTX/SPIR-V) is parked pending Zig nvptx64 toolchain fixes. This repo targets x86_64 AVX2, arena-only memory, NUMA-aligned threads, zero floating point.
 
+- [Full VDR-LLM-Prolog project](https://sireus.cloud/vdr-llm-prolog/)
+- [Python vdr-math library](https://github.com/ghowland/vdr-math)
+
 ---
 
 ## What This Is
