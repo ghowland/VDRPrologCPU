@@ -196,6 +196,7 @@ pub const Provenance = struct {
     confidence: Q16 = .{},
     timestamp: i32 = 0,
     derivation_rule_id: i32 = -1,
+    capability_level: i32 = 0, // for per-weight access control
 
     pub fn direct(source: SourceType, kb_id: VdrId, slot_id: i32, time: i32) Provenance {
         return .{
@@ -205,6 +206,7 @@ pub const Provenance = struct {
             .confidence = confidence_table[@intCast(@intFromEnum(source))],
             .timestamp = time,
             .derivation_rule_id = -1,
+            .capability_level = 0,
         };
     }
 
@@ -216,6 +218,7 @@ pub const Provenance = struct {
             .confidence = conf,
             .timestamp = time,
             .derivation_rule_id = rule_id,
+            .capability_level = 0,
         };
     }
 };
@@ -355,6 +358,9 @@ pub const KB = struct {
     grammars_count: i32 = 0,
     iose_offset: i32 = -1,
 
+    // Weight references
+    weight_refs_offset: i32 = -1, // points to KbWeightRefs in arena
+
     // Live state
     working_data_offset: i32 = -1,
     lru_table_offset: i32 = -1,
@@ -372,6 +378,10 @@ pub const KB = struct {
     bitset_table_offset: i32 = -1,
     bitset_count: i16 = 0,
 
+    // New facts since last training
+    new_facts_since_training_offset: i32 = -1,
+    new_facts_since_training_count: i32 = 0,
+
     // Children
     children_offset: i32 = -1,
     children_count: i16 = 0,
@@ -379,12 +389,21 @@ pub const KB = struct {
     mounts_offset: i32 = -1,
     mounts_count: i16 = 0,
 
+    // Training
+    training_lock: bool = false,
+    training_arena: ?*Arena = null,
+
     // Metadata
     visibility: i8 = 1, // INTERNAL
     frozen: i8 = 0,
     owner_id: VdrId = .{},
     created_at: i32 = 0,
     last_modified: i32 = 0,
+    version: i32 = 1,
+
+    // Padded to 256 bytes for cache line alignment.
+    // training_arena is the only nullable pointer in the system.
+    // null 99% of the time — set only during active training.
 
     pub fn isPublic(self: KB) bool {
         return self.visibility == 0;
@@ -400,6 +419,9 @@ pub const KB = struct {
     }
     pub fn isEphemeral(self: KB) bool {
         return self.id.isEphemeral();
+    }
+    pub fn isTraining(self: KB) bool {
+        return self.training_lock;
     }
 };
 
@@ -580,7 +602,7 @@ pub const Session = struct {
     user_id: VdrId = .{},
     kb_root_id: VdrId = VdrId.ROOT,
     ephemeral_root_id: VdrId = VdrId.EPHEMERAL_ROOT,
-    ephemeral_next_id: i64 = -2, // -1 is ephemeral root, next is -2
+    ephemeral_next_id: i64 = -2,
     visibility_level: i8 = 1,
     state: SessionState = .active,
 
@@ -591,6 +613,7 @@ pub const Session = struct {
     // Resource bounds
     max_kb_count: i32 = 100,
     max_ephemeral_kbs: i32 = 1000,
+    max_facts_per_kb: i32 = 10000,
     max_live_memory_bytes: i64 = 50 * 1024 * 1024,
     max_turns: i32 = 0,
 
@@ -1110,13 +1133,13 @@ pub const WorkItem = struct {
     m: i32 = 0,
     n: i32 = 0,
     k: i32 = 0,
-    row_start: i32 = 0,
-    row_end: i32 = 0,
     // Softmax/attention params
     seq_len: i32 = 0,
     n_heads: i32 = 0,
     d_head: i32 = 0,
     scale_v: i32 = 0,
+    // Completion signaling
+    completion: bool = false,
 };
 
 // ============================================================
@@ -1266,12 +1289,10 @@ pub const FireResult = struct {
 // Snapshot Header
 // ============================================================
 
-pub const SNAPSHOT_MAGIC = [4]u8{ 'V', 'L', 'P', 'S' };
-pub const SNAPSHOT_VERSION: i32 = 2;
+pub const SNAPSHOT_MAGIC = [4]u8{ 'V', 'D', 'R', 'S' };
+pub const SNAPSHOT_VERSION: i32 = 3;
 
 pub const SnapshotHeader = struct {
-    magic: [4]u8 = SNAPSHOT_MAGIC,
-    version: i32 = SNAPSHOT_VERSION,
     timestamp: i32 = 0,
     session_id: VdrId = .{},
     user_id: VdrId = .{},
@@ -1617,10 +1638,14 @@ pub const SystemConfig = struct {
     max_total_terms: i64 = 1_000_000,
     max_sessions_per_core: i32 = 500,
     max_ephemeral_kbs_per_session: i32 = 1000,
+    max_facts_per_session_kb: i32 = 10000,
 
     // Sessions
     default_max_turns: i32 = 0,
     auto_snapshot_interval: i32 = 100,
+
+    // HTTP
+    http_port: i32 = 1138,
 
     // Runners
     max_runners: i32 = 64,
@@ -1709,13 +1734,10 @@ pub const SEED = struct {
     pub const BUILTINS: VdrId = .{ .v = 5 };
     pub const COMMAND_VOCAB: VdrId = .{ .v = 6 };
     pub const HYGIENE: VdrId = .{ .v = 7 };
-    pub const TEMPLATES: VdrId = .{ .v = 8 };
-    pub const SENTENCES: VdrId = .{ .v = 9 };
-    pub const FORMATS: VdrId = .{ .v = 10 };
-    pub const MODEL: VdrId = .{ .v = 11 };
-    pub const MODEL_EMBEDDING: VdrId = .{ .v = 12 };
-    pub const MODEL_LAYERS: VdrId = .{ .v = 13 };
-    pub const MODEL_FINAL_NORM: VdrId = .{ .v = 14 };
-    pub const MODEL_LM_HEAD: VdrId = .{ .v = 15 };
-    pub const SEED_KB_COUNT: i32 = 15;
+    pub const EMBEDDING: VdrId = .{ .v = 8 }; // root.system.embedding
+    pub const OUTPUT: VdrId = .{ .v = 9 }; // root.system.output (lm_head + final norm)
+    pub const TEMPLATES: VdrId = .{ .v = 10 };
+    pub const SENTENCES: VdrId = .{ .v = 11 };
+    pub const FORMATS: VdrId = .{ .v = 12 };
+    pub const SEED_KB_COUNT: i32 = 12;
 };
