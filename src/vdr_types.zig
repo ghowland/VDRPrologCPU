@@ -230,7 +230,7 @@ pub const Fact = struct {
     }
 };
 
-pub const Kb = struct {
+pub const KB = struct {
     id: VdrId = .{},
     parent_id: VdrId = .{ .v = -1 },
     name_offset: i32 = 0,
@@ -285,19 +285,19 @@ pub const Kb = struct {
     created_at: i32 = 0,
     last_modified: i32 = 0,
 
-    pub fn isPublic(self: Kb) bool {
+    pub fn isPublic(self: KB) bool {
         return self.visibility == 0;
     }
-    pub fn isInternal(self: Kb) bool {
+    pub fn isInternal(self: KB) bool {
         return self.visibility <= 1;
     }
-    pub fn isFrozen(self: Kb) bool {
+    pub fn isFrozen(self: KB) bool {
         return self.frozen != 0;
     }
-    pub fn isRoot(self: Kb) bool {
+    pub fn isRoot(self: KB) bool {
         return self.parent_id.v == -1;
     }
-    pub fn isEphemeral(self: Kb) bool {
+    pub fn isEphemeral(self: KB) bool {
         return self.id.isEphemeral();
     }
 };
@@ -457,7 +457,7 @@ pub const GrammarFill = struct {
     enum_index: i16 = 0,
 };
 
-pub const GrammarKbMapping = struct {
+pub const GrammarKBMapping = struct {
     slot_index: i16 = 0,
     kb_id: VdrId = .{},
     slot_id: i32 = 0,
@@ -1377,7 +1377,7 @@ pub const CloneConfig = struct {
 // KB Create Config
 // ============================================================
 
-pub const KbCreateConfig = struct {
+pub const KBCreateConfig = struct {
     name: []const u8 = "",
     path: []const u8 = "",
     parent_id: VdrId = VdrId.ROOT,
