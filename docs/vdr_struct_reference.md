@@ -739,3 +739,318 @@ pub const SEED = struct {
 ```
 
 Well-known IDs for the seed KBs created at startup. These are the first 12 global KBs in the tree. `SYSTEM` and its children (OSO, CONFIDENCE, BUILTINS, COMMAND_VOCAB, HYGIENE, EMBEDDING, OUTPUT) are frozen after init. `EMBEDDING` and `OUTPUT` are normal global KBs with grant-based access — they hold the vocabulary embedding table and lm_head/final norm weights respectively. Domain KBs with their own weights are created beyond these seed IDs.
+
+---
+
+# VDR-Prolog Struct Reference — Addendum
+
+## Compaction-Driven Model Reduction Structs
+
+This addendum covers the typed relation system, compaction ingestion infrastructure, and model reduction analysis structs added to support LLM-compacted data ingestion and the structural reduction of the neural network.
+
+---
+
+## New Structs
+
+### RelationType
+
+```zig
+pub const RelationType = enum(i16) {
+    enables = 0, requires = 1, prevents = 2, implements = 3,
+    // ... 20 system-defined slots (0-19)
+    // ... 64 domain-registerable slots (64-127)
+    unknown = -1,
+};
+```
+
+The vocabulary of structural relationships in the system. An i16 enum with two ranges: system-defined slots 0-19 are frozen after init and carry compile-time-known structural properties; domain-registerable slots 64-127 are assigned during compaction ingestion when a document introduces relationship types not in the system set.
+
+The enum is i16 because the domain slots reach 127 — signed i8 maxes at 127 but the `unknown = -1` sentinel needs the negative range too, and squeezing both into i8 leaves zero headroom. i16 gives clean range for all 128 slots plus the sentinel with no ambiguity.
+
+Three methods encode structural properties that the Prolog engine uses for L3 reasoning without the LLM:
+
+**`inverse()`** — returns the reverse edge type. `enables.inverse()` returns `depends_on`. `part_of.inverse()` returns `contains`. Symmetric types return themselves. This is a switch on the enum — compile-time known, zero cost. When a query asks "what depends on X?", the engine automatically also queries "X enables what?" via the inverse. No rule needed. No LLM token consumed.
+
+**`isTransitive()`** — returns true for types where chains compose. `enables(A,B)` and `enables(B,C)` yields `enables(A,C)`. Ten of the twenty system types are transitive: enables, requires, extends, specializes, generalizes, part_of, contains, follows, precedes, depends_on. The Prolog engine computes transitive closure via BFS over contiguous integer arrays at L3 — what a conventional LLM would need multiple attention layers to discover.
+
+**`isSymmetric()`** — returns true for bidirectional types. `prevents(A,B)` means `prevents(B,A)` is also true. Four system types are symmetric: prevents, contradicts, equivalent_to, approximates. The engine auto-queries the swapped direction without storing the reverse edge.
+
+**`isSystemDefined()`** and **`isDomain()`** — range checks for slot classification. System slots are 0-19, domain slots are 64-127. The gap (20-63) is reserved for future system types.
+
+Used by: the ingestion pipeline (maps relationship strings from compacted documents to enum values), the Prolog engine's typed relation fast path (dispatches on enum for index lookup, transitive closure, inverse), the RelationIndex (groups relations by enum slot), and domain relation registration (assigns custom types to domain slots).
+
+---
+
+### TypedRelation
+
+```zig
+pub const TypedRelation = struct {
+    rel_type: RelationType = .unknown,
+    from_id: VdrId = .{},
+    to_id: VdrId = .{},
+    provenance: Provenance = .{},
+    strength: Q16 = .{},
+    scope_kb_id: VdrId = .{},
+};
+```
+
+A first-class typed edge between two entities. 48 bytes — same as Fact, which keeps contiguous arrays cache-aligned at the same stride.
+
+This is what the ingestion pipeline produces from relationship rows in compacted documents. The row `P1|enables|AR1` becomes a TypedRelation with `rel_type = .enables`, `from_id` = P1's VdrId, `to_id` = AR1's VdrId. It is also what the Prolog engine's transitive closure and inverse operations produce as derived relations.
+
+**`rel_type`** — the RelationType enum value. This is what makes typed relations faster than general Prolog rules for structural queries: the engine dispatches on an integer enum, not a functor lookup through the term store.
+
+**`from_id` and `to_id`** — the source and target entities as VdrIds. These are the actual IDs of facts or concepts in KBs, not Prolog term offsets. The engine matches them via `VdrId.eql()` — a single i64 comparison.
+
+**`provenance`** — full provenance, same as on Facts. For ingested relations, this carries the confidence chain: the source document's confidence combined with the compaction stage's confidence (minimum of the two). `capability_level` in provenance enables per-relation access control through the same mechanism as per-weight access.
+
+**`strength`** — Q16 value for weighted relations. Zero (all three fields: v=0, r0=0, r1=0) means binary — the relation either holds or doesn't. Nonzero means weighted — similarity scores, confidence-weighted edges, partial membership. `isBinary()` and `isWeighted()` check this. Most ingested relations from compacted documents are binary. Weighted relations come from computed similarity, training-derived association strength, or explicit confidence annotations.
+
+**`scope_kb_id`** — which KB this relation is authoritative in. Used for provenance tracking and grant checking — a session without access to the scope KB cannot query this relation. Also used by the RelationIndex to group relations per KB.
+
+Every TypedRelation in a KB has a corresponding TAG_RELATION Fact in the same KB. The Fact provides the standard provenance interface (the same provenance that every other piece of data carries), and its `value.v` field is the index into the KB's relations array. This means relations participate in the normal fact scanning, confidence propagation, and access control systems without special cases.
+
+---
+
+### DomainRelationDef
+
+```zig
+pub const DomainRelationDef = struct {
+    slot: i16 = 64,
+    name_offset: i32 = 0,
+    name_length: i16 = 0,
+    is_symmetric: bool = false,
+    is_transitive: bool = false,
+    inverse_slot: i16 = -1,
+    source_document_id: VdrId = .{},
+    registered_at: i32 = 0,
+};
+```
+
+Registration record for a domain-specific relationship type. 32 bytes. When a compacted document's decode legend includes a relationship type not in the system enum (e.g., `catalyzes` in chemistry, `refutes` in philosophy, `depends_on_version` in software), the ingestion pipeline registers it here and assigns it a domain slot.
+
+**`slot`** — which domain_N slot (64-127) this definition occupies. Assigned first-come during ingestion. Never reassigned within a running instance. If a second document uses the same relationship name, it reuses the existing slot — the properties must match or the ingestion fails with a validation error.
+
+**`name_offset` / `name_length`** — the relationship name in the text store. "catalyzes", "refutes", etc. This is what the ingestion parser matches against when it encounters a relationship type string not in the system enum.
+
+**`is_symmetric` and `is_transitive`** — structural properties declared by the compaction guide or inferred by the ingestion pipeline. These drive the Prolog engine's automatic behavior for this domain type — if `catalyzes` is declared transitive, transitive closure works for it just like for system-defined transitive types. If not declared, the engine treats it as non-transitive (no automatic chaining).
+
+**`inverse_slot`** — i16 pointing to the domain slot of the inverse type, or -1 if no inverse is defined. If a chemistry domain declares both `catalyzes` (slot 64) and `catalyzed_by` (slot 65), they reference each other as inverses. The Prolog engine uses this for automatic inverse dispatch the same way it uses `RelationType.inverse()` for system types.
+
+**`source_document_id`** — which compacted document registered this type. Provenance. If the document is later retracted, the domain slot can be noted as orphaned (but not reassigned during this instance).
+
+**`registered_at`** — integer timestamp of registration.
+
+DomainRelationDefs are stored as facts in `root.system.relation_types` (seed KB +13). They persist across restarts via normal KB persistence. The system-defined types (slots 0-19) are stored as frozen facts in the same KB. Domain types are appended — the KB is not frozen for the domain range.
+
+---
+
+### RelationIndex
+
+```zig
+pub const RELATION_TYPE_SLOTS: usize = 128;
+
+pub const RelationIndex = struct {
+    by_type_offset: i32 = -1,
+    by_type_counts: [128]i32 = [_]i32{0} ** 128,
+    by_from_offset: i32 = -1,
+    by_from_count: i32 = 0,
+    by_to_offset: i32 = -1,
+    by_to_count: i32 = 0,
+    total_relations: i32 = 0,
+    last_rebuilt: i32 = 0,
+};
+```
+
+The acceleration structure for typed relation queries. Lives per-KB — each KB with relations has its own RelationIndex. The struct is ~528 bytes (dominated by the 128-slot count array).
+
+**`by_type_counts`** — 128 i32 values, one per RelationType slot. `by_type_counts[@intFromEnum(.enables)]` tells you instantly how many `enables` relations this KB has. If zero, the Prolog engine skips this KB entirely for `enables` queries — no scanning, no allocation, no wasted cycles. This is the first check in the typed relation fast path.
+
+**`by_type_offset`** — offset into the arena where TypedRelation arrays are stored, grouped by type. All `enables` relations are contiguous, then all `requires` relations, etc. This means scanning all `enables` relations in a KB reads a contiguous memory block — cache-friendly, no interleaving with other types.
+
+**`by_from_offset` / `by_from_count`** — offset to a sorted-by-from-id index. Used for "everything that X relates to" queries. The index maps VdrId → range of TypedRelation entries. Binary search on VdrId.v finds the range, then linear scan within the range.
+
+**`by_to_offset` / `by_to_count`** — same structure sorted by to_id. Used for "everything that relates to Y" queries.
+
+**`total_relations`** — total count across all types. Used by `isDirty()` to detect when the index needs rebuilding — if `total_relations != kb.relations_count`, new relations were asserted since the last rebuild.
+
+**`last_rebuilt`** — integer timestamp of last rebuild. The index is eventually consistent — rebuilt periodically (configurable via `relation_index_rebuild_interval` in SystemConfig, default every 100 relation assertions), not on every assertion. Between rebuilds, new relations are in the KB's relations array but not in the index. The Prolog engine falls back to linear scan of the relations array for unindexed relations. At maturity, rebuilds are infrequent because ingestion is batch, not continuous.
+
+`countForType()` reads a single i32 from the count array. `hasType()` checks if the count is nonzero. Both are O(1). The typed relation fast path in the Prolog engine calls `hasType()` first — if the KB has zero relations of the requested type, the entire KB is skipped in microseconds.
+
+---
+
+### CompactionProfile
+
+```zig
+pub const CompactionProfile = struct {
+    source_document_id: VdrId = .{},
+    tables_ingested: i32 = 0,
+    rows_ingested: i32 = 0,
+    facts_created: i32 = 0,
+    relations_created: i32 = 0,
+    rules_created: i32 = 0,
+    relation_types_used: [128]bool = [_]bool{false} ** 128,
+    domain_types_registered: i32 = 0,
+    text_bytes_stored: i32 = 0,
+    numeric_values_stored: i32 = 0,
+    compression_ratio: Q16 = .{},
+    ingestion_timestamp: i32 = 0,
+    validation_errors: i32 = 0,
+};
+```
+
+Audit record per ingested compacted document. ~256 bytes. Created during ingestion, immutable afterward. Stored as a fact in the `root.system.ingestion` seed KB and referenced by the parent document KB via `compaction_profile_offset`.
+
+**`source_document_id`** — VdrId of the parent document KB created during ingestion (e.g., the KB at `root.knowledge.math.math_4`).
+
+**`tables_ingested`** — how many tables the compacted document contained (each becomes a child KB).
+
+**`rows_ingested`** — total rows across all tables (each becomes a group of facts).
+
+**`facts_created`, `relations_created`, `rules_created`** — the output counts. These are what the ingestion actually produced. `totalEntities()` sums all three.
+
+**`relation_types_used`** — boolean array indexed by RelationType slot. Shows which relationship types appeared in this document. `relationTypeCount()` counts the trues. This feeds model reduction analysis: if a document covers 12 of the 20 system-defined relationship types, it provides significant structural coverage.
+
+**`domain_types_registered`** — how many new domain slots this document's decode legend registered. Typically 0-5 per document.
+
+**`text_bytes_stored`** — total text content stored in the text store from this document's cells.
+
+**`numeric_values_stored`** — how many cells were detected as numeric and stored as TAG_VALUE facts instead of TAG_TEXT.
+
+**`compression_ratio`** — Q16 value of original_bytes / compacted_bytes. For a 50,000-byte paper compacted to 5,000 bytes, this is Q16.fromParts(10, 0, 0) representing 10×. Stored as Q16 for fractional ratios.
+
+**`ingestion_timestamp`** — when the ingestion completed.
+
+**`validation_errors`** — how many validation errors were encountered (and resolved or accepted) during ingestion. Zero means clean ingestion. Nonzero means some references were missing or column counts mismatched — the document was still ingested but with warnings recorded.
+
+Used by: model reduction analysis (aggregate `relations_created` and `relation_types_used` across all profiles to estimate L3 coverage), hygiene runners (monitor ingestion quality over time), and admin queries ("how much structure have we ingested?").
+
+---
+
+### ModelReductionConfig
+
+```zig
+pub const ModelReductionConfig = struct {
+    base_n_layers: i32 = 16,
+    base_mlp_dim: i32 = 5632,
+    base_n_heads: i32 = 16,
+    base_vocab_size: i32 = 32000,
+
+    reduced_n_layers: i32 = 6,
+    reduced_mlp_dim: i32 = 2048,
+    reduced_n_heads: i32 = 12,
+    reduced_vocab_size: i32 = 8192,
+
+    relation_types_covered: i32 = 0,
+    total_typed_relations: i32 = 0,
+    total_prolog_rules: i32 = 0,
+    estimated_l3_coverage: Q16 = .{},
+
+    use_i16_weights: bool = true,
+
+    pub fn estimatedWeightBytes(self: ModelReductionConfig) i64 { ... }
+};
+```
+
+Advisory struct that links compaction analysis to model architecture sizing. Lives in SystemConfig. The admin or a hygiene runner populates the analysis fields (`relation_types_covered`, `total_typed_relations`, `total_prolog_rules`, `estimated_l3_coverage`) from CompactionProfile aggregates, then decides the reduced architecture parameters.
+
+**`base_*` fields** — the conventional architecture this system would need without compaction. 16 layers, 5632 MLP width, 16 heads, 32K vocab. These are reference values for comparison, not operational parameters.
+
+**`reduced_*` fields** — the target architecture with compaction carrying the structural reasoning load. 6 layers, 2048 MLP width, 12 heads, 8K vocab. These are what the admin sets in the config JSON and what ModelConfig reads.
+
+**`relation_types_covered`** — how many of the 128 RelationType slots have at least one relation in any KB. Aggregated from CompactionProfile `relation_types_used` arrays across all ingested documents. Higher means more structural diversity is covered by L3.
+
+**`total_typed_relations`** — total TypedRelation count across all KBs. Each one is a reasoning path the neural network doesn't need. 2,000+ relations across 15+ types is where the model reduction becomes defensible.
+
+**`total_prolog_rules`** — total Prolog rules across all KBs. Includes both relation-derived rules and general rules from seed and domain KBs.
+
+**`estimated_l3_coverage`** — Q16 fraction estimating what percentage of typical queries can be handled at L3 given the current relation and rule coverage. This is the admin's judgment — the system provides the data, the admin interprets it.
+
+**`use_i16_weights`** — whether model weights are stored as i16 (2 bytes, half the i32 weight budget). The reduced model at 143M params × 2 bytes = 286 MB. At i32 it would be 572 MB. i16 is the design point.
+
+**`estimatedWeightBytes()`** — computes total weight memory from the reduced architecture parameters. Used for arena sizing verification: if the estimated weight bytes exceed the global arena's weight budget, the config is invalid.
+
+The design decision to keep this advisory (not auto-reducing) is important. The admin sees the compaction metrics, understands the domain coverage, and decides whether 6 layers is appropriate or whether 8 are needed because the domain has unusual reasoning patterns. The system provides estimates, not mandates.
+
+---
+
+## Modified Structs
+
+### FactTag — Two New Variants
+
+Two new enum values added at slots 12 and 13 (empty remains at 255):
+
+**`relation = 12`** — marks a Fact whose `value.v` is an index into the KB's relations array. The Fact exists to provide standard provenance on the TypedRelation (every TypedRelation gets a companion TAG_RELATION Fact). This means relations participate in normal fact scanning, confidence queries, and access control without any special-case code paths. The Provenance on the Fact is the canonical provenance for the relation.
+
+**`column_schema = 13`** — marks a Fact that defines a column in an ingested table KB. `value.v` is the column index (0, 1, 2, ...), the text store holds the column name. These are the first N facts in any table KB created by the ingestion pipeline. The system reads them to reconstruct the table schema — "column 0 is 'id', column 1 is 'principle', column 2 is 'rationale'." Without these, the column names would be lost after ingestion and the data would be positional-only.
+
+### KB — Seven New Fields
+
+Six new i32 offset/count fields and one i32 for compaction provenance, totaling 28 bytes. These fit within the existing padding to 256 bytes. The KB struct was already padded — these fields consume slack space, not new space.
+
+**`relations_offset: i32 = -1`** — offset into the arena where this KB's TypedRelation array begins. -1 means no relations. Set during ingestion when relationships are asserted, or during Prolog rule firing when derived relations are created.
+
+**`relations_count: i32 = 0`** — current number of TypedRelations in the array.
+
+**`relations_capacity: i32 = 0`** — allocated capacity of the relations array. Same grow-or-fail pattern as facts and rules.
+
+**`relation_index_offset: i32 = -1`** — offset to this KB's RelationIndex in the arena. -1 means no index built yet. Built on first query or during periodic rebuild. `hasRelationIndex()` checks this.
+
+**`domain_rel_defs_offset: i32 = -1`** — offset to DomainRelationDef array. Only populated on KBs that register domain-specific relationship types — typically the parent document KB whose decode legend introduced new types. Most KBs have -1 here. `hasDomainRelDefs()` checks this.
+
+**`domain_rel_defs_count: i32 = 0`** — count of domain definitions registered by this KB.
+
+**`compaction_profile_offset: i32 = -1`** — offset to CompactionProfile for this KB. Only set on KBs created by the ingestion pipeline. -1 for all other KBs. `isFromCompaction()` checks this — useful for distinguishing hand-created KBs from ingested ones in queries and hygiene operations.
+
+### SystemConfig — Three New Fields
+
+**`model_reduction: ModelReductionConfig = .{}`** — the advisory model reduction analysis. Loaded from the `model_reduction` section of config.json. The admin fills in the reduced architecture parameters and the system uses `estimatedWeightBytes()` for arena sizing verification.
+
+**`ingestion: IngestionConfig = .{}`** — defaults for compaction ingestion. Contains `source_type` (default published), `generate_rules` (default true), `generate_typed_relations` (default true), `detect_numeric` (default true), `max_facts_per_table` (default 10000), `freeze_after_ingest` (default true), `max_domain_relation_defs` (default 64). Loaded from the `ingestion` section of config.json.
+
+**`relation_index_rebuild_interval: i32 = 100`** — how many relation assertions trigger an index rebuild. Default 100. Lower values mean more frequent rebuilds (more current index, more rebuild CPU cost). Higher values mean less frequent rebuilds (staler index, less CPU cost). At maturity, ingestion is batch and infrequent, so this value matters mainly during initial data loading.
+
+### LevelStats — Three New Counters and One New Method
+
+**`l3_relation_queries: i64 = 0`** — L3 operations that were typed relation index lookups. Incremented when the Prolog engine's typed relation fast path handles a query without general unification.
+
+**`l3_transitive_closures: i64 = 0`** — L3 operations that were transitive chain resolutions. Incremented when the engine computes a transitive closure (BFS over relation chains) at L3.
+
+**`l3_inverse_lookups: i64 = 0`** — L3 operations that used `inverse()` dispatch to find reverse edges. Incremented when the engine automatically queries the inverse type.
+
+**`l3RelationRatio()`** — returns a Q16 fraction: (relation_queries + transitive_closures + inverse_lookups) / total l3_count. This tells you how much of L3 is structural relation operations vs. general Prolog. If high (>70%), the typed relation system is carrying its weight — compaction is paying off. If low (<30%), the compacted data isn't being used for queries and the model reduction may be too aggressive, or the wrong kinds of questions are being asked.
+
+### SEED — Two New Seed KBs
+
+**`RELATION_TYPES: VdrId = .{ .v = 13 }`** — `root.system.relation_types`. Holds the system-defined RelationType definitions as frozen facts (slots 0-19) and domain-registered DomainRelationDefs as appendable facts (slots 64-127). The KB is not fully frozen — the system range is frozen, the domain range accepts new registrations during ingestion.
+
+**`INGESTION: VdrId = .{ .v = 14 }`** — `root.system.ingestion`. Holds the ingestion queue (facts referencing pending .compact files) and CompactionProfile records (one per successfully ingested document). Batch ingestion runners read the queue. Admin and hygiene queries read the profiles for coverage analysis.
+
+**`SEED_KB_COUNT`** bumps from 12 to 14.
+
+---
+
+## Structs That Live Elsewhere
+
+The ingestion pipeline has its own parse-time structs that do not go in `vdr_types.zig`. These live in `vdr_ingestion.zig` and exist only in temporary arenas during ingestion:
+
+**`CompactDocument`** — top-level container for a parsed .compact file. Holds arrays of CompactTable, CompactRelationship, CompactLegendEntry, and CompactSectionEntry. Destroyed after facts and rules are asserted.
+
+**`CompactTable`** — a parsed table with column definitions and row arrays. Up to 32 columns, up to 10,000 rows per table.
+
+**`CompactRow`** — a parsed row with an array of CompactCell values. One cell per column.
+
+**`CompactCell`** — a single cell value with text offset/length, numeric detection flag, and parsed numeric value if applicable.
+
+**`CompactColumn`** — column definition with name, index, and detected type (text, integer, q16_value, id_ref, id_list).
+
+**`CompactRelationship`** — a parsed relationship row with from/rel/to text references.
+
+**`CompactLegendEntry`** — a key-value pair from the decode legend.
+
+**`CompactSectionEntry`** — a section index entry mapping section ID to title and referenced IDs.
+
+**`ValidationResult`** and **`ValidationError`** — validation output. Error types: duplicate_id, undefined_reference, column_mismatch, missing_legend, invalid_table_header, empty_document.
+
+These structs are deliberately kept out of `vdr_types.zig` because they serve no purpose after ingestion completes. They exist for the duration of one function call (`ingestDocument`), in a temporary arena that is destroyed afterward. Putting them in the core types file would imply they are part of the system's persistent data model, which they are not. They are the scaffolding, not the building.

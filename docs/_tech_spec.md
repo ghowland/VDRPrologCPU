@@ -919,3 +919,702 @@ build.zig             — single native x86_64 target
 
 27 files. ~25K lines estimated.
 ```
+
+---
+
+# VDR-Prolog Technical Specification — Appendices
+
+## Supporting Tables, Reference Data, and Cross-References
+
+---
+
+## Appendix A: Q16 Arithmetic Verification Reference
+
+### A.1 Remainder Propagation Test Vectors
+
+```
+# q16_add_vectors(a_v|a_r0|a_r1|b_v|b_r0|b_r1|expect_v|expect_r0|expect_r1|notes)
+65536|0|0|65536|0|0|131072|0|0|1.0 + 1.0 = 2.0, clean
+32768|16384|0|32768|16384|0|65537|0|0|0.5+0.25 + 0.5+0.25, r0 carry into v
+100|100|16000|200|200|16000|300|301|32000|r1 sum below carry threshold
+100|100|16384|200|200|16384|300|301|0|r1 sum hits 32768, carries to r0
+1|32767|16383|1|32767|16383|3|32766|32766|near-max r0 carry chain
+-1|0|0|1|0|0|0|0|0|cancellation to exact zero
+```
+
+### A.2 Multiplication Cross-Term Verification
+
+```
+# q16_mul_vectors(a_v|a_r0|a_r1|b_v|b_r0|b_r1|expect_v|expect_r0|expect_r1|notes)
+65536|0|0|65536|0|0|65536|0|0|1.0 × 1.0 = 1.0
+32768|0|0|32768|0|0|16384|0|0|0.5 × 0.5 = 0.25
+65536|100|0|65536|200|0|65536|0|300|cross-term: 100×65536 + 200×65536 / D
+2|0|0|3|0|0|0|6|0|small × small, result below 1/D, lives in r0
+0|1|0|0|1|0|0|0|0|sub-D × sub-D, a.r0×b.r0 not captured (sub-r1 structure)
+```
+
+### A.3 Division Remainder Saturation Cases
+
+```
+# q16_div_vectors(a_v|b_v|expect_v|expect_r0|r1_saturates|notes)
+65536|3|21845|21845|no|1.0 / 3: remainder 1/3 of D, r1 stable
+65536|7|9362|9362|no|1.0 / 7: clean
+65536|65536|65536|0|no|1.0 / 1.0: exact
+1|3|0|21845|yes after chains|chained /3 pushes r1 toward saturation
+65536|127|516|4|yes after 8 chains|prime divisor, worst case for remainder
+65536|65536|65536|0|never|power-of-two divisors always clean
+65536|256|256|0|never|factors of D never produce remainder
+```
+
+### A.4 Softmax FRU Deficit Assignment Examples
+
+```
+# softmax_fru(input_logits|exp_values|raw_probs|remainders|deficit|assigned_to|final_probs|sum)
+[3,1,1]|[exp(3),exp(1),exp(1)]|[47083,8946,8946]|[47083%t,8946%t,8946%t]|561|0|[47644,8946,8946]|65536
+[0,0,0]|[1,1,1]|[21845,21845,21845]|[r0,r1,r2]|1|largest_r|[21846,21845,21845]|65536
+[10,0,0,0]|[exp(10),..]|[65131,135,135,135]|[..]|0|none|[65131,135,135,135]|65536
+# Sum is exactly D=65536 in every case. No exceptions. Proven across 20 benchmark epochs.
+```
+
+---
+
+## Appendix B: Confidence Table Derivations
+
+### B.1 Confidence Values with Fraction Origins
+
+```
+# confidence_derivations(source_type|fraction|decimal|q16_v|q16_exact|derivation)
+vdr_computation|1/1|1.000|65536|yes|system computed, no external dependency
+prolog_derivation|1/1|1.000|65536|yes|derived from rules with confidence 1/1 inputs
+database|98/100|0.980|64225|truncated from 64224.8|structured, schema-validated, occasionally stale
+prometheus|95/100|0.950|62259|truncated from 62259.2|metrics pipeline, sampling granularity
+script|95/100|0.950|62259|same as prometheus|deterministic but authored code, bugs possible
+rest_api|85/100|0.850|55705|truncated from 55705.6|external service, versioning, schema drift
+published|80/100|0.800|52428|truncated from 52428.8|peer reviewed or editorial process, still human error
+user_stated|70/100|0.700|45875|truncated from 45875.2|human assertion, no verification
+web_search|50/100|0.500|32768|exact|unverified internet content, SEO manipulation
+llm_generated|30/100|0.300|19660|truncated from 19660.8|hallucination risk, no ground truth
+unknown|0/1|0.000|0|exact|no provenance, no trust
+```
+
+### B.2 Confidence Combination Rules
+
+```
+# confidence_combination(operation|formula|example|result)
+chain|min(a, b)|published(52428) → llm_generated(19660)|19660
+parallel_agree|max(a, b)|user_stated(45875) + database(64225)|64225
+contradiction|0|source_a says X, source_b says not-X|0
+derivation|min(inputs) if rule confidence=1/1|prolog(65536) on inputs [52428, 45875]|45875
+promotion|direct_set|admin verifies llm_generated → published|52428
+degradation_by_age|v - (age_days * decay_rate)|stale database entry after 30 days|depends on decay
+```
+
+### B.3 Ingestion Confidence Chain
+
+```
+# ingestion_confidence(source_type|compaction_stage|combined|rationale)
+published|llm_generated|19660|min(52428, 19660) — compaction is weakest link
+database|llm_generated|19660|min(64225, 19660)
+user_stated|llm_generated|19660|min(45875, 19660)
+published|verified_compaction|52428|after human review promotes compaction to published
+vdr_computation|n/a|65536|training output, full confidence
+prolog_derivation|n/a|65536|derived from verified facts
+```
+
+---
+
+## Appendix C: Arena Sizing Worksheets
+
+### C.1 Global Arena Detailed Breakdown (Reduced Model)
+
+```
+# global_arena_budget(component|calculation|bytes|MB|notes)
+embedding_weights_v|8192 × 2048 × 2|33554432|32.0|i16 vocab embedding
+embedding_weights_r0|8192 × 2048 × 2|33554432|32.0|i16 remainder
+embedding_weights_r1|8192 × 2048 × 2|33554432|32.0|i16 remainder
+layer_qkv_v|6 × 2048 × 4096 × 2|100663296|96.0|6 layers, i16
+layer_qkv_r|6 × 2048 × 4096 × 4|201326592|192.0|r0+r1 combined
+layer_o_v|6 × 2048 × 2048 × 2|50331648|48.0|output projection
+layer_o_r|6 × 2048 × 2048 × 4|100663296|96.0|r0+r1
+layer_mlp_up_v|6 × 2048 × 2048 × 2|50331648|48.0|narrow MLP
+layer_mlp_up_r|6 × 2048 × 2048 × 4|100663296|96.0|r0+r1
+layer_mlp_down_v|6 × 2048 × 2048 × 2|50331648|48.0|narrow MLP
+layer_mlp_down_r|6 × 2048 × 2048 × 4|100663296|96.0|r0+r1
+lm_head_v|2048 × 8192 × 2|33554432|32.0|reduced vocab
+lm_head_r|2048 × 8192 × 4|67108864|64.0|r0+r1
+layer_norms|6 × 2 × 2048 × 8|196608|0.2|gamma per norm, Q16
+kb_store|100000 × 256|25600000|24.4|KB structs
+fact_store|10000000 × 48|480000000|457.8|maximum facts
+typed_relations|1000000 × 48|48000000|45.8|maximum relations
+relation_indices|10000 × 640|6400000|6.1|~10K KBs with indices
+rule_store|100000 × 48|4800000|4.6|rules
+term_store|1000000 × 24|24000000|22.9|terms
+text_store|67108864|67108864|64.0|64 MB text
+grammar_store|5242880|5242880|5.0|grammars
+path_index|1000000 × 16|16000000|15.3|path hash → ID
+grant_store|5242880|5242880|5.0|grants
+audit_ring|1000000 × 28|28000000|26.7|audit entries
+compaction_profiles|10000 × 256|2560000|2.4|ingested documents
+confidence_table|88|88|0.0|11 × Q16
+total|||~1270|
+```
+
+### C.2 Per-Core Arena Breakdown
+
+```
+# per_core_arena_budget(component|calculation|bytes|MB|notes)
+session_table|500 × 256|128000|0.1|max sessions per core
+session_kb_store|1000 × 500 × 256|128000000|122.1|ephemeral KBs per session × sessions ÷ sharing
+session_fact_store|10000 × 500 × 48|240000000|228.9|theoretical max, actual sharing reduces
+kv_cache|2 × 6 × 2048 × 12 × 170 × 4|401080320|382.5|K+V × layers × seq × heads × d_head × i32
+scratch_buffers|33554432|33554432|32.0|GEMM intermediates, attention scores
+binding_buffers|1048576|1048576|1.0|Prolog unification
+render_buffers|1048576|1048576|1.0|grammar output
+work_queue|1024 × 128|131072|0.1|ring buffer items
+# NOTE: actual per-core usage is ~220 MB because sessions share ephemeral structure
+# via COW and most sessions are idle at any moment. The theoretical max above
+# exceeds the arena size; the arena is sized for actual concurrent working set.
+```
+
+### C.3 Training Temporary Arena Sizing
+
+```
+# training_arena_sizing(weight_shape|params|grad_v|grad_r0r1|momentum|variance|transpose|activations|scratch|total_MB)
+2048×4096|8388608|32|16|32|32|32|16|16|176
+2048×2048|4194304|16|8|16|16|16|16|9|97
+2048×2048|4194304|16|8|16|16|16|16|9|97
+1024×1024|1048576|4|2|4|4|4|4|2|24
+512×512|262144|1|0.5|1|1|1|1|0.6|6
+128 (vector)|128|0.0005|0.0003|0.0005|0.0005|0.0005|0.0005|0.0001|0.003
+# formula per param: 4(grad_v) + 2(grad_r0) + 2(grad_r1) + 4(momentum) + 4(variance) + 4(transpose) = 20 bytes
+# plus activations: seq_len × d_model × 4 bytes (one layer's worth)
+# plus scratch: ~10% overhead
+```
+
+---
+
+## Appendix D: RelationType Property Matrix
+
+### D.1 System-Defined Relations (Slots 0-19)
+
+```
+# relation_properties(slot|name|inverse|symmetric|transitive|usage)
+0|enables|depends_on|no|yes|X makes Y possible or functional
+1|requires|enables|no|yes|X cannot exist or work without Y
+2|prevents|prevents|yes|no|X blocks or forbids Y; mutual
+3|implements|unknown|no|no|X is a concrete realization of abstract Y
+4|extends|generalizes|no|yes|X adds capability to Y without replacing
+5|overrides|unknown|no|no|X replaces Y's behavior in a scope
+6|validates|verified_by|no|no|X confirms Y is correct
+7|verified_by|validates|no|no|Y was confirmed by X
+8|contradicts|contradicts|yes|no|X and Y cannot both hold; mutual
+9|causes|determined_by|no|no|X directly produces Y as effect
+10|determined_by|causes|no|no|Y's value or form is fixed by X
+11|depends_on|enables|no|yes|X needs Y to function; transitive chain
+12|equivalent_to|equivalent_to|yes|no|X and Y are interchangeable
+13|approximates|approximates|yes|no|X and Y are close but not identical
+14|specializes|generalizes|no|yes|X is a more specific form of Y
+15|generalizes|specializes|no|yes|X is a more general form of Y
+16|part_of|contains|no|yes|X is a component inside Y
+17|contains|part_of|no|yes|Y is a component inside X
+18|follows|precedes|no|yes|X comes after Y in sequence
+19|precedes|follows|no|yes|X comes before Y in sequence
+```
+
+### D.2 Transitive Closure Semantics
+
+```
+# transitive_behavior(type|chain_example|derived_fact|cost)
+enables|enables(A,B) + enables(B,C)|enables(A,C)|BFS integer scan
+requires|requires(A,B) + requires(B,C)|requires(A,C)|BFS integer scan
+extends|extends(A,B) + extends(B,C)|extends(A,C)|BFS integer scan
+specializes|specializes(A,B) + specializes(B,C)|specializes(A,C)|BFS integer scan
+generalizes|generalizes(A,B) + generalizes(B,C)|generalizes(A,C)|BFS integer scan
+part_of|part_of(A,B) + part_of(B,C)|part_of(A,C)|BFS integer scan
+contains|contains(A,B) + contains(B,C)|contains(A,C)|BFS integer scan
+follows|follows(A,B) + follows(B,C)|follows(A,C)|BFS integer scan
+precedes|precedes(A,B) + precedes(B,C)|precedes(A,C)|BFS integer scan
+depends_on|depends_on(A,B) + depends_on(B,C)|depends_on(A,C)|BFS integer scan
+# Non-transitive types: implements, overrides, validates, verified_by,
+#   contradicts, causes, determined_by, equivalent_to, approximates
+# These do NOT chain. A implements B and B implements C does NOT mean A implements C.
+```
+
+### D.3 Domain Slot Registration Rules
+
+```
+# domain_slot_rules(rule|detail)
+allocation|first-come within slots 64-127; never reassigned within a running instance
+registration_source|decode legend of compacted document during ingestion
+properties_required|name, is_symmetric, is_transitive; inverse_slot optional
+property_inference|if inverse not declared, set to -1 (no automatic inverse)
+cross-document|once registered, usable system-wide by any document or query
+persistence|DomainRelationDef saved as facts in root.system.relation_types KB
+max_domains|64 slots (64 through 127 inclusive)
+collision|second document registering same name reuses existing slot; properties must match or error
+```
+
+---
+
+## Appendix E: Error Code Reference
+
+### E.1 Complete Error Codes with Recovery Actions
+
+```
+# error_codes(code|value|category|recovery_action|detail_field_meaning)
+ok|0|none|none|unused
+division_by_zero|100|arithmetic|log_and_continue|operand index
+overflow|101|arithmetic|log_and_continue|operation type
+kb_not_found|200|kb|log_and_continue|requested VdrId.v
+kb_full|201|kb|compact|kb VdrId.v
+kb_frozen|202|kb|log_and_continue|kb VdrId.v
+kb_access_denied|203|kb|log_and_deny|kb VdrId.v
+slot_out_of_range|204|kb|log_and_continue|requested slot index
+slot_empty|205|kb|log_and_continue|requested slot index
+depth_exceeded|300|prolog|simplify_query|depth reached
+no_matching_rule|301|prolog|log_and_continue|query term offset
+unification_failed|302|prolog|log_and_continue|term offset pair
+max_bindings_exceeded|303|prolog|simplify_query|bindings count
+invalid_template|400|grammar|log_and_continue|template offset
+slot_type_mismatch|401|grammar|log_and_continue|slot index
+render_capacity_exceeded|402|grammar|log_and_continue|buffer size needed
+session_limit|500|session|kill_oldest_clone|core_id
+snapshot_failed|501|session|retry_snapshot|session VdrId.v
+snapshot_corrupt|502|session|restore_from_snapshot|checksum expected
+clone_failed|503|session|log_and_continue|parent session VdrId.v
+merge_conflict|504|session|log_and_continue|conflict count
+grant_denied|600|grant|log_and_deny|grant class
+grant_expired|601|grant|log_and_deny|grant VdrId.v
+grant_exhausted|602|grant|log_and_deny|grant VdrId.v
+grant_revoked|603|grant|log_and_deny|grant VdrId.v
+grant_admin_required|604|grant|log_and_deny|operation type
+runner_error_threshold|700|runner|recycle_runner|consecutive error count
+runner_connection_lost|701|runner|reconnect_with_backoff|last attempt timestamp
+arena_exhausted|800|memory|kill_oldest_clone|arena_id
+arena_not_found|801|memory|log_and_continue|requested arena_id
+init_failed|900|system|restore_from_snapshot|init phase number
+corrupt_state|901|system|restore_from_snapshot|detection point
+seed_load_failed|902|system|restore_from_snapshot|seed kb VdrId.v
+```
+
+### E.2 HTTP Status Code Mapping
+
+```
+# http_status_mapping(condition|http_status|error_code|body)
+client not found|401|n/a|{"error": "unknown client"}
+auth failed|401|n/a|{"error": "invalid auth_token"}
+client suspended|403|n/a|{"error": "client not active"}
+session not owned|403|kb_access_denied|{"error": "session belongs to different client"}
+session not found|404|n/a|{"error": "no session with this UUID"}
+session gone (ejected, no snapshot)|410|n/a|{"error": "session ejected, no snapshot"}
+malformed request|400|n/a|{"error": "JSON parse error", "detail": "..."}
+queue full|503|n/a|{"error": "core queue full, retry later"}
+request timeout|504|n/a|{"error": "compute thread timeout"}
+arena exhausted during request|503|arena_exhausted|{"error": "memory pressure", "arena": N}
+kb access denied during compute|200|kb_access_denied|{"status": "error", "code": 203}
+prolog depth exceeded|200|depth_exceeded|{"status": "error", "code": 300}
+successful inference|200|ok|{"status": "ok", "output": "...", "tokens": N}
+successful kb query|200|ok|{"status": "ok", "facts": [...]}
+```
+
+---
+
+## Appendix F: Struct Size and Alignment Verification
+
+### F.1 Core Struct Sizes
+
+```
+# struct_sizes(struct|target_size|alignment|cache_lines|notes)
+Q16|8|4|0.125|v:4 + r0:2 + r1:2, no padding
+Q32|16|8|0.25|v:8 + r0:4 + r1:4
+Q335|240|8|3.75|5 arrays × 6 × i64
+VdrId|8|8|0.125|single i64
+Fact|48|8|0.75|tag:4 + Q16:8 + Provenance:36, padded to 48
+Provenance|36|8|0.5625|7 fields, i32/i64 mix with capability_level
+KB|256|8|4.0|exactly 4 cache lines, padded
+Term|24|4|0.375|type:1 + pad:3 + 3×i32 + Q16:8
+Rule|48|8|0.75|id:8 + 10 fields + creator:8
+TypedRelation|48|8|0.75|rel:2 + pad + 2×VdrId:16 + Prov:36 + Q16:8 + VdrId:8, padded
+RelationIndex|528|4|8.25|128×i32 counts + 6 fields
+DomainRelationDef|32|8|0.5|slot:2 + offset:4 + length:2 + 2×bool + inverse:2 + VdrId:8 + time:4, padded
+CompactionProfile|256|4|4.0|128×bool + 12 integer fields + Q16
+Session|~200|8|~3.1|~25 fields, fits in 256 with padding
+Grant|~80|8|1.25|12 fields
+AuditEntry|~44|8|0.6875|9 fields
+Command|~24|4|0.375|7 fields
+WeightMatrix|~32|8|0.5|3 slices + 2×i32
+GemmCache|~32|8|0.5|slice + 4 fields
+```
+
+### F.2 Array Stride Impact on Cache
+
+```
+# stride_analysis(struct|stride_bytes|elements_per_cacheline|elements_per_L1_32KB|GEMM_relevant)
+Fact|48|1.33|682|no — GEMM reads WeightMatrix.v not facts
+WeightMatrix.v element|4|16|8192|yes — inner loop
+WeightMatrix.r0 element|2|32|16384|no — scalar post-pass only
+TypedRelation|48|1.33|682|no — integer scan, not SIMD
+Term|24|2.67|1365|no — Prolog traversal
+Rule|48|1.33|682|no — rule matching
+i32 (GEMM operand)|4|16|8192|yes — this is the hot path
+```
+
+---
+
+## Appendix G: SIMD Operation Coverage
+
+### G.1 AVX2 Operation Mapping
+
+```
+# simd_operations(operation|simd_path|scalar_path|remainder_handling|invariant_check)
+GEMM dot product|8×i32 → 2×4×i64 widen-madd-accumulate|tail elements|r0 from final divTrunc, r1=0|INVARIANT_11: SIMD == scalar
+GEMM output|single divTrunc of i64 accumulator|same|r0 = mod(sum, D)|INVARIANT_1: mod captured
+softmax max scan|8×i32 horizontal max|tail|no remainder (integer max)|n/a
+softmax exp|scalar (table lookup)|same|per-element exact|n/a
+softmax prob|scalar (integer division)|same|per-element r0 = mod(exp×D, total)|INVARIANT_3: FRU
+softmax FRU|scalar (find max remainder, assign deficit)|same|deficit = D - sum(probs)|INVARIANT_3: sum == D
+attention Q·K dot|8×i32 widen-madd|tail|r0 on final result|INVARIANT_5: i64 accumulate
+attention V weighted sum|8×i32 multiply + accumulate|tail|r0 on final result|same
+RMSNorm variance|8×i32 square + accumulate in i64|tail|r0 on mean|INVARIANT_5
+RMSNorm inv_sqrt|scalar Newton-Raphson in Q32|same|Q32 → Q16 conversion captures r0|INVARIANT_7 check
+RMSNorm scale|8×i32 multiply (input × inv_rms × gamma)|tail|r0 from final divTrunc|INVARIANT_1
+SiLU activation|scalar (piecewise integer approx)|same|r0 on each element|n/a
+residual add|8×i32 add|tail|full r1→r0→v carry chain per element|INVARIANT_2: r0,r1 propagated
+```
+
+### G.2 SIMD Verification Requirements
+
+```
+# simd_verification(test|method|pass_criterion)
+bit_identity|run SIMD and scalar on same input, compare all output bytes|byte-identical
+overflow_safety|max-range i32 inputs (±2^31-1), K=2048|i64 accumulator doesn't overflow
+remainder_capture|known-remainder inputs (e.g., 1/3 chain)|r0 matches expected mod
+FRU_determinism|same logits 1000 times|same deficit assignment every time
+lane_independence|corrupt one SIMD lane, verify others unaffected|fault isolation
+tail_handling|input lengths 1-7 (non-multiple of 8)|correct results, no buffer overread
+alignment|unaligned input pointers|correct results (Zig vectors handle alignment)
+```
+
+---
+
+## Appendix H: Execution Level Decision Tree
+
+### H.1 L1/L2/L3 Classification
+
+```
+# level_decision(condition|level|tokens|cost_ratio|example)
+typed relation in index, exact match|L3|0|0%|"what does P1 enable?" → index scan
+transitive closure, all edges in index|L3|0|0%|"what does P1 transitively enable?"
+inverse lookup, type has inverse()|L3|0|0%|"what depends on AR1?" via enables inverse
+prolog rule matches, no LLM needed|L3|0|0%|fire_and_commit on satisfied rules
+prolog rule needs LLM to select|L2|~18|~3%|LLM picks which rule, Prolog executes
+novel query, no rule coverage|L1|50-500|100%|full forward pass, judgment required
+ambiguous user intent|L1|50-500|100%|LLM interprets, may emit commands
+multi-step reasoning, partial L3|L2|~18 per step|~3% per step|LLM orchestrates, Prolog executes steps
+output formatting via grammar|L3|0|0%|grammar render from KB URL
+output requiring judgment/framing|L1|variable|100%|prose generation for user
+```
+
+### H.2 L3 Ratio Maturity Curve
+
+```
+# l3_maturity(phase|typed_relations|prolog_rules|estimated_l3_pct|description)
+cold_start|0|~50 seed|5%|only seed hygiene rules fire at L3
+early_ingestion|200|100|25%|first few compacted documents
+moderate_coverage|2000|500|60%|~50 documents across several domains
+good_coverage|5000|1500|80%|domain KB weight begins to matter
+mature|10000+|3000+|93%|most structural queries handled at L3
+# Target is 93% at maturity. Below 80% means compaction pipeline isn't feeding enough structure.
+# Above 95% may mean the model is being underused for judgment calls it should handle.
+```
+
+---
+
+## Appendix I: File Format Reference
+
+### I.1 File Types
+
+```
+# file_formats(extension|magic|version|purpose|location)
+.kb|VDKB|1|KB struct + facts + rules + terms + children + text + weight_refs + new_facts|data/kb/
+.wt|VDWT|1|weight SoA arrays (v, r0, r1) for one matrix or vector|data/weights/
+.snap|VDRS|4|full session snapshot (global view + session tree)|data/snapshots/
+.dat|VDMF|1|manifest: index of all persisted KBs|data/manifest.dat
+.compact|n/a|n/a|pipe-delimited compacted document for ingestion|data/incoming/
+.json|n/a|n/a|system configuration|config.json
+```
+
+### I.2 KB File Section Order
+
+```
+# kb_file_sections(order|section|size_formula|required)
+1|KbFileHeader|fixed (~128 bytes)|yes
+2|KB struct|256 bytes|yes
+3|Facts array|facts_count × 48|if facts_count > 0
+4|Rules array|rules_count × 48|if rules_count > 0
+5|Terms array|terms_count × 24|if terms_count > 0
+6|Children ID array|children_count × 8|if children_count > 0
+7|Text blob|variable|if text_length > 0
+8|KbWeightRefs struct|~64 bytes|if has_weight_refs
+9|TypedRelation array|relations_count × 48|if relations_count > 0
+10|RelationIndex|~528 bytes|if has_relation_index
+11|New-facts indices|new_facts_count × 4|if new_facts_count > 0
+12|CompactionProfile|~256 bytes|if from_compaction
+```
+
+### I.3 Weight File Section Order
+
+```
+# weight_file_sections(order|section|size_formula)
+1|WeightFileHeader|fixed (~64 bytes)
+2|v array|element_count × 4 (i32)
+3|r0 array|element_count × 2 (i16)
+4|r1 array|element_count × 2 (i16)
+```
+
+---
+
+## Appendix J: Compaction Format Quick Reference
+
+### J.1 Table Types for Source Document Characters
+
+```
+# compaction_table_selection(source_character|required_tables|optional_tables)
+philosophy/principles|concepts, principles, claims|axes, distinctions, examples
+architecture spec|commitments, components, flows, boundaries|rules, validation
+schema spec|entities, fields, discriminators, enumerations|lifecycle, validation
+operational patterns|operations, rules, validation, failure_modes|examples, boundaries
+API/protocol spec|operations, lifecycle, validation|flows, enumerations
+construction/build|vocabulary, rules|anti_patterns (merged as concept category)
+methodology/process|phases, steps, deliverables, criteria|validation, roles
+data/reference|preserve source table structure|domain-specific
+# Always include: relationships, section_index, decode_legend
+# Anti-patterns always merge into concepts with category=anti_pattern
+```
+
+### J.2 Claim Type Vocabulary
+
+```
+# claim_types(type|meaning|prolog_handling|example)
+axiom|foundational assumption, not derived|asserted unconditionally|"Remainder is not error"
+derivation|follows from other stated principles|has dependency chain in rules|"Softmax sums to D because FRU"
+observation|empirical finding|asserted with source provenance|"Division worse than mul for remainder"
+prescription|recommended action|generates advisory rule|"Escalate to Q32 when r1 saturates"
+reframe|existing concept redefined|shadows prior definition in scope|"Attention window is the KB tree"
+distinction|boundary between two things|generates prevents/distinguishes edges|"System vs performance scalability"
+```
+
+### J.3 Compression Ratio Targets
+
+```
+# compression_targets(source_type|target_reduction_pct|reason)
+philosophy/synthesis|85-93|most prose-heavy, most repetition to remove
+architecture/methodology|80-85|moderate prose, some existing structure
+schema specs|75-85|already partially structured
+data/reference|60-75|mostly reformatting, minimal prose removal
+# If output > target: keeping too much prose. If output < target: dropping data.
+```
+
+---
+
+## Appendix K: Seed KB Contents
+
+### K.1 Seed KB Summary
+
+```
+# seed_kbs(id|path|content_type|entry_count|frozen|notes)
++1|root|container|0|no|tree root, not frozen (domain KBs added as children)
++2|root.system|container|0|yes|system KB parent
++3|root.system.oso|principles|15|yes|15 engineering principles
++4|root.system.confidence|table|11|yes|confidence table as facts
++5|root.system.builtins|declarations|448|yes|IOSE declarations for all builtins
++6|root.system.command_vocab|vocabulary|~300|yes|command token definitions
++7|root.system.hygiene|rules|~50|yes|self-maintenance Prolog rules
++8|root.system.embedding|weights|1|yes|vocab embedding WeightMatrix (8192 × 2048)
++9|root.system.output|weights|2|yes|lm_head WeightMatrix + final norm WeightVector
++10|root.templates|container|0|yes|template parent
++11|root.templates.sentences|grammars|~100|yes|sentence-level grammar templates
++12|root.templates.formats|grammars|~50|yes|output format templates
++13|root.system.relation_types|registry|20+|no|system-defined (frozen) + domain-registered (appendable)
++14|root.system.ingestion|queue|0|no|ingestion queue and CompactionProfile records
+```
+
+### K.2 Builtin Categories
+
+```
+# builtin_categories(id|name|count|grant_required|pure|examples)
+0|text_ops|~40|no|yes|concat, split, trim, length, find, replace
+1|collections|~30|no|yes|sort, reverse, unique, flatten, zip
+2|sets|~15|no|yes|union, intersect, difference, subset, member
+3|mappings|~20|no|yes|get, put, delete, keys, values, merge
+4|closed_arithmetic|~25|no|yes|add, sub, mul, div, mod, abs, negate
+5|comparison|~10|no|yes|eq, lt, gt, le, ge, between, clamp
+6|rounding|~8|no|yes|floor, ceil, round, truncate (Q16 → integer)
+7|integer_bit_ops|~12|no|yes|and, or, xor, shift_left, shift_right, popcount
+8|linear_algebra|~20|no|yes|dot, matmul, transpose, scale, norm
+9|statistics|~15|no|yes|mean, median, variance, min, max, sum, count
+10|active_arithmetic|~15|no|yes|accumulate, running_sum, ema, derivative
+11|structure_ops|~20|no|yes|path_resolve, tree_walk, depth, ancestors
+12|number_theory|~12|no|yes|gcd, lcm, is_prime, factorize, modpow
+13|polynomial|~8|no|yes|evaluate, roots, degree, coefficient
+14|finite_field|~6|no|yes|ff_add, ff_mul, ff_inv, ff_pow
+15|discrete_calculus|~8|no|yes|difference, summation, falling_factorial
+16|op_filesystem|~20|yes(fs)|no|read_file, write_file, list_dir, stat
+17|op_compile|~8|yes(compile)|no|compile_zig, check_syntax
+18|op_execute|~10|yes(execute)|no|run_process, capture_output
+19|op_lint|~6|yes(lint)|no|lint_check, format_check
+20|op_network|~15|yes(network)|no|http_get, http_post, dns_resolve
+21|op_process|~10|yes(process)|no|spawn, signal, wait, pid_info
+# Total: 448 builtins across 22 categories
+# Categories 0-15: pure, no grants, deterministic, cacheable
+# Categories 16-21: operational, grant-gated, side effects, audited
+```
+
+---
+
+## Appendix L: Model Architecture Comparison
+
+### L.1 Conventional vs. Reduced Configuration
+
+```
+# model_comparison(parameter|conventional_16L|reduced_6L|reduction|what_replaced_it)
+n_layers|16|6|62.5%|multi-hop → Prolog transitive closure
+d_model|2048|2048|0%|unchanged, attention needs capacity
+n_heads|16|12|25%|typed relation enum dispatch replaces some
+d_head|128|170|+33%|fewer heads, each wider
+mlp_dim|5632|2048|63.6%|facts in KBs, not weight patterns
+vocab_size|32000|8192|74.4%|grammar rendering replaces token generation
+total_params|~1B|~143M|85.7%|
+weight_bytes_i16|~2 GB|~286 MB|85.7%|
+per_token_MACs|~640M|~126M|80.3%|
+single_core_tok_s|~37|~190|5.1×|
+system_8core_tok_s|~296|~1520|5.1×|
+```
+
+### L.2 What Each Layer Does in Reduced Model
+
+```
+# layer_roles(layer|primary_function|what_it_replaced|KB_interaction)
+1|token embedding, positional encoding|unchanged|reads embedding from root.system.embedding
+2|basic syntactic patterns, phrase structure|unchanged|none
+3|semantic understanding, intent classification|was layers 3-6 in conventional|reads prompt_input, prompt_last
+4|KB address resolution, command recognition|was layers 7-10|resolves which KBs and rules are relevant
+5|output planning, response strategy|was layers 11-14|decides: command, prose, or KB URL output
+6|judgment calls, ambiguity handling, nuance|was layers 15-16|handles what L3 cannot
+# Layers 1-2: understanding what was said
+# Layers 3-4: deciding what to do about it
+# Layers 5-6: deciding how to respond
+# Everything structural (fact retrieval, relationship reasoning, transitive composition,
+# inverse lookup, grammar rendering) runs at L3 on typed relations and Prolog rules.
+```
+
+---
+
+## Appendix M: Build Step Validation Criteria
+
+```
+# build_validation(step|files|validation_command|pass_criterion)
+1|build.zig, root.zig, vdr_arena.zig, vdr_types.zig|zig build && ./zig-out/bin/vdr-prolog-cpu|prints arena info, exits code 0
+2|vdr_config.zig, config.json|load config, print parsed values|correct values printed, bad JSON exits code 1 with field name
+3|vdr_arena.zig (ArenaSet)|allocate global + N per-core|prints arena layout matching config totals
+4|vdr_thread_pool.zig|spawn N threads, join|all N threads spawn, pin, touch memory, join cleanly
+5|vdr_http.zig|curl http://localhost:1138/health|returns {"status": "ok"}, clean shutdown on SIGTERM
+6|vdr_work_queue.zig|POST request processed on pinned thread|response from pinned core, concurrent requests distribute
+```
+
+---
+
+## Appendix N: Cross-Reference Index
+
+### N.1 Struct → Spec Section Mapping
+
+```
+# struct_sections(struct|defined_in|primary_spec_section|related_sections)
+VdrId|vdr_types.zig|3.1|3.2, 3.3, 3.4
+Q16|vdr_types.zig|4.1|7.2, 7.3, 10.2, A.1-A.4
+Q32|vdr_types.zig|4.2|7.4 (RMSNorm Newton-Raphson)
+Q335|vdr_types.zig|4.2|domain KB physics data
+Fact|vdr_types.zig|4.3|8.2, 9.1, 14
+FactTag|vdr_types.zig|4.3|9.1 (relation, column_schema variants)
+Provenance|vdr_types.zig|4.4|9.1, 10.2, B.1-B.3
+KB|vdr_types.zig|4.5|8.1, 9.1, 10.1, 14, 15
+WeightMatrix|vdr_types.zig|8.4|7.2, 8.2, 10.2, 15
+GemmCache|vdr_types.zig|8.2|7.2
+KbWeightRefs|vdr_types.zig|8.2|8.2, 8.3
+RelationType|vdr_types.zig|4.7|9.1, 13.2-13.4, D.1-D.3
+TypedRelation|vdr_types.zig|4.7|9.1, 13.2
+RelationIndex|vdr_types.zig|4.7|13.2
+DomainRelationDef|vdr_types.zig|4.7|D.3
+CompactionProfile|vdr_types.zig|9.1|9.4
+ModelReductionConfig|vdr_types.zig|18.2|19, L.1
+Term|vdr_types.zig|4.6|13.1
+Rule|vdr_types.zig|4.6|13.1
+Session|vdr_types.zig|6.3, 11|6.2, 11.4
+Arena|vdr_types.zig|5.1|5.2, 5.3, 10.1
+SystemConfig|vdr_types.zig|18.1|all
+LevelStats|vdr_types.zig|12.1|H.1, H.2
+```
+
+### N.2 File → Spec Section Mapping
+
+```
+# file_sections(file|spec_sections|description)
+vdr_types.zig|4, 4.7|all persistent structs and enums
+vdr_ingestion.zig|9|parse-time structs, parser, validator
+vdr_arena.zig|5|arena allocator, ArenaSet
+vdr_config.zig|18|JSON config loading
+vdr_thread_pool.zig|6.1, 7|pinned threads, lifecycle
+vdr_work_queue.zig|6.2|atomic ring buffer
+vdr_http.zig|6|HTTP listener and handlers
+vdr_ops.zig|7|SIMD operations
+vdr_model.zig|8|weight retrieval, forward pass
+vdr_kb_store.zig|14|KB CRUD, path index
+vdr_relation.zig|4.7, 13.2-13.4|relation index, typed queries
+vdr_prolog.zig|13|unification, query, backtracking
+vdr_grammar.zig|4.5 (Grammar)|template compile, render
+vdr_session.zig|6.3, 11|session lifecycle, _llm.* subtree
+vdr_persist.zig|15|save/load KB and weight files, manifest
+vdr_snapshot.zig|16|session snapshots
+vdr_training.zig|10|training arenas, weight update
+vdr_runner.zig|K.1 (runners)|poller, processor, internal, batch
+vdr_inference.zig|12|inference loop, prompt cycle
+vdr_command.zig|4.8 (Command)|command parser, executor
+vdr_access.zig|8.3, 14|visibility, group weight access
+vdr_grant.zig|4.8 (Grant)|grant CRUD
+vdr_audit.zig|4.8 (AuditEntry)|ring buffer, query
+vdr_confidence.zig|4.9, B|confidence operations
+vdr_seed.zig|17|seed layer init
+vdr_builtin.zig|K.2|448 builtins
+vdr_system.zig|23|top-level init
+vdr_test.zig|24 (Stage 7)|test suite
+```
+
+### N.3 Invariant → Enforcement Location
+
+```
+# invariant_enforcement(invariant|number|enforced_in|how)
+remainder never discarded|1|vdr_ops.zig|every divTrunc followed by mod capture
+r0 r1 carry meaning|2|vdr_ops.zig, vdr_types.zig (Q16)|all arithmetic propagates both
+softmax exact unity|3|vdr_ops.zig (softmax)|FRU deficit assignment, tested per call
+three-field comparison|4|vdr_types.zig (Q16.compare)|lexicographic across v, r0, r1
+i64 accumulation|5|vdr_ops.zig (GEMM, dot)|widen before multiply
+no float|6|build.zig, all files|no f32/f64 imports or casts anywhere
+r1 sentinel|7|vdr_ops.zig, vdr_training.zig|check after chains, escalate to Q32
+sign-bit partition|8|vdr_types.zig (VdrId)|isGlobal/isEphemeral methods
+session death|9|vdr_session.zig|arena reset on kill
+arena exhaustion|10|vdr_arena.zig|alloc returns null, callers check
+SIMD == scalar|11|vdr_test.zig|bit-identical comparison test
+training arenas only post-init|12|vdr_training.zig|canTrain + cleanupTraining
+fixed _llm.* subtree|13|vdr_session.zig|template clone, no top-level creation
+ArrayListManaged rule|14|all files|code review enforcement
+fromParts three args|15|vdr_types.zig|function signature enforces
+relation slots frozen|16|vdr_types.zig (RelationType)|enum is compile-time
+domain slots first-come|17|vdr_relation.zig|registration checks existing slot
+TAG_RELATION provenance|18|vdr_relation.zig, vdr_kb_store.zig|assert Fact alongside TypedRelation
+index eventually consistent|19|vdr_relation.zig|rebuild on interval, not per-assertion
+typed bypass unification|20|vdr_relation.zig|separate query path, no Term construction
+model reduction advisory|21|vdr_config.zig|config JSON sets, estimatedWeightBytes computes
+profiles immutable|22|vdr_ingestion.zig|no update after initial write
+per-thread GEMM|23|vdr_ops.zig|no thread_pool param, no row splitting
+lazy loading|24|vdr_persist.zig|manifest only at startup, load on access
+```
