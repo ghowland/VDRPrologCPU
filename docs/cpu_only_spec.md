@@ -665,63 +665,78 @@ Barrier: atomic decrement. Last thread to finish signals completion. No mutex, n
 
 ---
 
-## 7. Model Architecture — KB-Distributed Weights
+## 7. Model Weights as KB Data
 
-### 7.1 Model as KB Tree
+### 7.1 Weights Live Where They Serve
 
-The model is not a monolithic blob. Each component is a KB:
-
-```
-root.model
-├── embedding                    # vocab_size × d_model, i16 weights
-├── layers
-│   ├── layer_00
-│   │   ├── attention
-│   │   │   ├── qkv_weights      # d_model × 3*d_model
-│   │   │   └── output_weights   # d_model × d_model
-│   │   ├── mlp
-│   │   │   ├── up_weights       # d_model × mlp_dim
-│   │   │   └── down_weights     # mlp_dim × d_model
-│   │   └── norm
-│   │       ├── attn_gamma       # d_model
-│   │       └── mlp_gamma        # d_model
-│   ├── layer_01
-│   │   └── ...
-│   └── layer_15
-│       └── ...
-├── final_norm                   # d_model
-└── lm_head                     # d_model × vocab_size
-```
-
-### 7.2 Grant-Gated Model Access
-
-Access to model weight KBs follows the same grant system as any KB:
+There is no separate model tree. Weights live in the KBs they serve. A KB that represents a concept also holds the weights for reasoning about that concept.
 
 ```
-// User A has full model access
-grant(user_a, read, root.model.*)
+root.science.physics.qed
+    facts[0] = alpha_em (value: 47258, confidence: 1/1)
+    facts[1] = coupling_constant (value: ...)
+    weights[0] = WeightMatrix { inference weights for QED reasoning }
 
-// User B only gets layers 0-7 (reduced capability)
-grant(user_b, read, root.model.embedding)
-grant(user_b, read, root.model.layers.layer_0*)
-grant(user_b, read, root.model.final_norm)
-grant(user_b, read, root.model.lm_head)
-
-// User C gets no model access (KB-only operations, L3 only)
-// No grants to root.model.*
+root.ops.incidents.triage
+    facts[0] = severity_threshold (value: ...)
+    rules[0] = escalation_rule
+    weights[0] = WeightMatrix { triage judgment weights }
 ```
 
-The forward pass checks access for each layer KB before loading weights. If a layer is denied, the forward pass skips it (or returns an error). This means different users literally see different models.
+The model is the sum of all weights across all KBs the session has access to. There is no `root.model`. Each domain carries its own weights alongside its own data, rules, and grammars.
 
-### 7.3 Weight Format
+### 7.2 Grant-Gated Capability
 
-Weights stored as i16 in KBs (2 bytes per parameter). During forward pass, widened to i32 for computation. This halves model memory:
+A user with access to `root.science.physics` gets the physics reasoning weights. A user without that grant doesn't — their model literally doesn't include physics capability. The forward pass collects weights from all visible KBs and assembles the effective model from the available pieces.
+
+### 7.3 Shared Infrastructure Weights
+
+Embedding tables, final layer norm, and output projection are fundamental — they live in system KBs that all sessions inherit:
 
 ```
-1B params × 2 bytes = 2 GB (fits in laptop RAM)
+root.system.embedding
+    weights[0] = WeightMatrix { vocab embedding table }
+
+root.system.output
+    weights[0] = WeightMatrix { lm_head projection }
+    weights[1] = WeightVector { final layer norm }
 ```
 
-Weight KBs are frozen after loading. Immutable. Shared read-only across all sessions.
+These are frozen seed KBs. Every session sees them. Domain-specific KBs add capability on top.
+
+### 7.4 Weight Format
+
+Weight data stored as TAG_MATRIX or TAG_VECTOR facts referencing SoA-packed arrays in the arena. The Fact provides metadata (provenance, confidence, dimensions). The packed arrays provide SIMD-friendly contiguous access. See gemm_notes.md for stride penalty analysis and cache strategy.
+
+### 7.5 Live Training
+
+Weights are not frozen. Training is live — the system bootstraps itself and improves itself through the normal command interface. An admin in "learn everything" mode creates new weight KBs via builtins. There is no separate training phase.
+
+---
+
+**File: cpu_only_spec.md**
+
+Search for: `root                          id: +1`
+
+Replace the entire seed tree listing through `~23,400 seed entries + model weight KBs. Frozen after init.` with:
+
+```
+root                          id: +1
+├── system                    id: +2
+│   ├── oso                   id: +3     (15 engineering principles)
+│   ├── confidence            id: +4     (confidence table)
+│   ├── builtins              id: +5     (448 IOSE declarations)
+│   ├── command_vocab         id: +6     (~300 command tokens)
+│   ├── hygiene               id: +7     (self-maintenance rules)
+│   ├── embedding             id: +8     (vocab embedding weights)
+│   └── output                id: +9     (lm_head + final norm weights)
+├── templates                 id: +10
+│   ├── sentences             id: +11
+│   └── formats               id: +12
+└── (domain KBs with their own weights go here)
+
+~23,400 seed entries. System KBs frozen after init.
+Domain KBs carry their own weights alongside data and rules.
 
 ---
 

@@ -15,7 +15,7 @@ Softmax reaching exact unity (sum = 65536 every time) is proven in a CPU toy mod
 
 ### VdrId Sign-Bit Partitioning
 
-Positive i64 = global (persistent, shared). Negative i64 = ephemeral (session-local, dies with session). This is the sign bit of the value itself, not a flag in a struct. `VdrId.isGlobal()` checks `v >= 0`. Ephemeral IDs decrement from -1. They cannot collide with global IDs. When resolving a path, ephemeral tree is checked first, then global. Ephemeral shadows global at the same path position.
+Positive i64 = global (persistent, shared). Negative i64 = session (session-local, dies with session). This is the sign bit of the value itself, not a flag in a struct. `VdrId.isGlobal()` checks `v >= 0`. Session IDs decrement from -1. They cannot collide with global IDs. When resolving a path, session tree is checked first, then global. Session shadows global at the same path position.
 
 ### Model Weights Live in KBs
 
@@ -31,7 +31,7 @@ The HTTP listener receives JSON work requests and passes them to NUMA-pinned thr
 
 ### Arena Reset is the Garbage Collector
 
-No free. No GC. When a session dies, its ephemeral arena region resets (cursor = 0). All ephemeral data gone. Global arena data is never freed during operation. Arena exhaustion returns `ErrorCode.arena_exhausted`, never silent corruption.
+No free. No GC. When a session dies, its session arena region resets (cursor = 0). All session data gone. Global arena data is never freed during operation. Arena exhaustion returns `ErrorCode.arena_exhausted`, never silent corruption.
 
 ### The Config is Not Optional
 
@@ -47,12 +47,12 @@ Anywhere. Ever. Not in HTTP parsing, not in timing, not in logging, not in arith
 
 ---
 
-### Global/Ephemeral ID System
+### Global/Session ID System
 
 Every entity gets a 64-bit ID (`VdrId`). The sign bit (bit 63) partitions the address space:
 
 - **Positive (bit 63 = 0):** Global. Persistent. Shared across sessions.
-- **Negative (bit 63 = 1):** Ephemeral. Session-local. Dies with session.
+- **Negative (bit 63 = 1):** Session. Session-local. Dies with session.
 
 Every KB has **dual addressing** — reachable two ways:
 
@@ -73,31 +73,31 @@ physics has its own UUID
 
 Both resolve to the same KB. Walk traverses the tree. Direct jumps by UUID. The kernel can specify exactly a KB or a fact within it either way.
 
-**Ephemeral tree per session:**
+**Session tree per session:**
 
-Each session gets an ephemeral root at -1. IDs monotonically decrement:
+Each session gets an session root at -1. IDs monotonically decrement:
 
 ```
 session_root = -1
 session_root.science.physics.qed.alpha_em = -1.-2.-3.-4.-5
 ```
 
-Each new ephemeral KB also gets its own UUID, but the UUID is negative, so it's still ephemeral.
+Each new session KB also gets its own UUID, but the UUID is negative, so it's still session.
 
 **Writing new data:**
 
-The LLM can write a new fact that locally becomes `qed.alpha_strong` as walk ID -6 in the session's ephemeral tree, and it gets its own negative UUID. The session can write data that is ephemeral and marked in negatives — these will never collide with global data because global data traverses positive numbers and global UUIDs are positive numbers.
+The LLM can write a new fact that locally becomes `qed.alpha_strong` as walk ID -6 in the session's session tree, and it gets its own negative UUID. The session can write data that is session and marked in negatives — these will never collide with global data because global data traverses positive numbers and global UUIDs are positive numbers.
 
 **Promotion:**
 
-When the LLM decides ephemeral data is worth keeping, it explicitly asserts to a global KB path. The data crosses from negative to positive address space. Ephemeral data never leaks to global implicitly.
+When the LLM decides session data is worth keeping, it explicitly asserts to a global KB path. The data crosses from negative to positive address space. Session data never leaks to global implicitly.
 
 **Resolution order:**
 
-When the LLM queries a path, ephemeral is checked first:
-1. Check session's ephemeral tree for that path
+When the LLM queries a path, session is checked first:
+1. Check session's session tree for that path
 2. If not found, check global tree
-3. Ephemeral shadows global at the same path position
+3. Session shadows global at the same path position
 
 ---
 

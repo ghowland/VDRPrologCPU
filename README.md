@@ -179,28 +179,25 @@ The system compiles away its own need for the expensive component. At investigat
 
 ## Model as Knowledge Base
 
-The model is not a monolithic weight blob. Each component is a KB:
+There is no separate model tree. Weights live in the KBs they serve. A KB that represents a concept also holds the weights for reasoning about that concept.
 
 ```
-root.model
-├── embedding           (vocab × d_model, i16 weights)
-├── layers
-│   ├── layer_00
-│   │   ├── attention
-│   │   │   ├── qkv_weights
-│   │   │   └── output_weights
-│   │   ├── mlp
-│   │   │   ├── up_weights
-│   │   │   └── down_weights
-│   │   └── norm
-│   └── ...
-├── final_norm
-└── lm_head
+root.science.physics.qed
+    facts[0] = alpha_em
+    weights[0] = WeightMatrix { QED reasoning weights }
+
+root.ops.incidents.triage
+    rules[0] = escalation_rule
+    weights[0] = WeightMatrix { triage judgment weights }
 ```
 
-Access to model weight KBs is grant-gated. Different users can see different model capabilities. User A gets all 16 layers. User B gets layers 0-7. User C gets no model access (L3-only KB operations).
+The model is the sum of all weights across all KBs the session has access to. There is no `root.model`. Each domain carries its own weights alongside its own data, rules, and grammars.
 
-Weights stored as i16 (2 bytes per parameter). 1B parameters = 2 GB. Fits in laptop RAM.
+Access to weight KBs is grant-gated. A user with access to `root.science.physics` gets the physics reasoning weights. A user without that grant has a model that literally doesn't include physics. Different sessions compose different models from the same KB tree.
+
+Shared infrastructure weights (embedding table, output projection, final norm) live in `root.system.embedding` and `root.system.output` — frozen seed KBs every session inherits.
+
+Training is live. Weights are not frozen after loading. The system bootstraps and improves itself through the normal command interface. No separate training phase.
 
 ---
 
@@ -239,7 +236,7 @@ At L3 steady state (93% of operations), most work skips the forward pass entirel
 
 One thread per physical core, pinned via OS affinity. Each thread owns its per-core arena. Session assigned to a core at creation; all session work runs on that core's thread using that core's arena.
 
-GEMM parallelized: all cores contribute rows, synchronize via atomic counter per layer. NUMA alignment via first-touch policy, each pinned thread touches its arena pages at init, ensuring local memory placement on multi-socket systems. On single-socket laptops, this still helps cache locality.
+Each core runs its own sessions independently. A session's forward pass runs single-core with SIMD on the core that owns that session. Multi-core value is N sessions running simultaneously, not one GEMM split across cores.
 
 ---
 
