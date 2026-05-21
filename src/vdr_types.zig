@@ -1649,6 +1649,14 @@ pub const RelationType = enum(i32) {
     unifies, // Physics: integrates separate entities into single framework
     foundation_for, // Math: provides axiomatic ground from which Y is built
     constrains, // Math: imposes limitation or restriction on Y
+    produces, // Geography: X actively generates Y through ongoing process
+    spans, // Geography: X extends across or operates through multiple Y
+    borders, // Geography: X is spatially adjacent to Y; symmetric
+    influences, // Geography: X affects value/behavior of Y without sole determination
+    amplifies, // Geography: X strengthens Y through positive feedback
+    regulates, // Anatomy: X controls or modulates activity of Y via feedback/signaling
+    supplies, // Anatomy: X provides essential material (blood/nutrients/O₂) to Y
+    flows_to, // Anatomy: X delivers flow (blood/air/filtrate/signal) to Y
 
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
@@ -1685,7 +1693,7 @@ pub const RelationType = enum(i32) {
     agent_of = 4000, // Language: X is the agent performing action Y
     object_of, // Language: X is the object receiving action Y
     instrument_of, // Language: X is the tool used in action Y
-    location_of, // Language: X is where Y occurs
+    location_of, // Language/Geography: X is where Y occurs
     destination_of, // Language: X is where Y is directed toward
     source_of, // Language: X is where Y originates from
     purpose_of, // Language: X is the reason for Y
