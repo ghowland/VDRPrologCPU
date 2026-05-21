@@ -39,7 +39,7 @@ JSON config loaded at startup drives everything: core count, arena sizes, model 
 
 ### File Prefix
 
-All source files use `vdr_` prefix (not `vlp_`). The project was renamed from TensorProlog to VDR-Prolog. VDR = Value, Denominator, Remainder.
+All source files use `vdr_` prefix (not `vdr_`). The project was renamed from TensorProlog to VDR-Prolog. VDR = Value, Denominator, Remainder.
 
 ### No Floating Point
 

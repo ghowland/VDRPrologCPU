@@ -65,11 +65,11 @@ Bit 63 = 1: Session (negative). Session-local. Dies with session.
 Global IDs are UUID-derived, always positive. Session IDs are monotonically decrementing negative integers, unique within a session.
 
 ```
-struct vlp_id {
+struct vdr_id {
     v: i64,   // positive = global, negative = session
 
-    pub fn isGlobal(self: vlp_id) bool { return self.v >= 0; }
-    pub fn isSession(self: vlp_id) bool { return self.v < 0; }
+    pub fn isGlobal(self: vdr_id) bool { return self.v >= 0; }
+    pub fn isSession(self: vdr_id) bool { return self.v < 0; }
 };
 ```
 
@@ -78,7 +78,7 @@ struct vlp_id {
 Global IDs are UUIDs with bit 63 cleared (always positive). Generated from a counter + hash at KB creation time. Immutable once assigned.
 
 ```
-fn generateGlobalId(counter: *i64) vlp_id {
+fn generateGlobalId(counter: *i64) vdr_id {
     counter.* += 1;
     // Hash counter to spread across space, clear sign bit
     const raw = hashU64(counter.*);
@@ -91,7 +91,7 @@ fn generateGlobalId(counter: *i64) vlp_id {
 Each session owns a decrementing counter starting at -1.
 
 ```
-fn generateSessionId(counter: *i64) vlp_id {
+fn generateSessionId(counter: *i64) vdr_id {
     const id = counter.*;
     counter.* -= 1;
     return .{ .v = id };  // -1, -2, -3, ...
@@ -158,18 +158,18 @@ This writes to the global store with a new global UUID. The session version can 
 ```
 // Q16 — the primary operational type
 // 8 bytes. Two remainder slots. No wasted padding.
-struct vlp_q16 {
+struct vdr_q16 {
     v: i32,       // numerator (value / D)
     r0: i16,      // remainder level 0
     r1: i16,      // remainder level 1 (sub-r0 precision)
 };
 // D = 65536 (2^16). Implicit. Never stored.
-// sizeof(vlp_q16) = 8 bytes.
+// sizeof(vdr_q16) = 8 bytes.
 // r1 carries precision below r0.
 // Two levels of remainder = you always know what was lost.
 
 // Q32 — intermediate precision
-struct vlp_q32 {
+struct vdr_q32 {
     v: i64,
     r0: i32,
     r1: i32,
@@ -177,7 +177,7 @@ struct vlp_q32 {
 // D = 4294967296 (2^32). sizeof = 16 bytes.
 
 // Q335 — high precision / transcendentals
-struct vlp_q335 {
+struct vdr_q335 {
     v: [6]i64,      // 384-bit value as 6 × 64-bit limbs
     r0: [6]i64,
     r1: [6]i64,
@@ -190,7 +190,7 @@ struct vlp_q335 {
 ### 4.2 Fact Types
 
 ```
-enum vlp_fact_tag: i32 {
+enum vdr_fact_tag: i32 {
     TAG_VALUE       = 0,
     TAG_TEXT        = 1,
     TAG_REFERENCE   = 2,
@@ -206,20 +206,20 @@ enum vlp_fact_tag: i32 {
     TAG_EMPTY       = 255,
 };
 
-struct vlp_provenance {
+struct vdr_provenance {
     source_type: i32,
-    source_kb_id: vlp_id,     // now vlp_id (i64), not i32
+    source_kb_id: vdr_id,     // now vdr_id (i64), not i32
     source_slot_id: i32,
-    confidence: vlp_q16,
+    confidence: vdr_q16,
     timestamp: i32,
     derivation_rule_id: i32,
 };
 // sizeof = 32 bytes.
 
-struct vlp_fact {
-    tag: vlp_fact_tag,
-    value: vlp_q16,
-    provenance: vlp_provenance,
+struct vdr_fact {
+    tag: vdr_fact_tag,
+    value: vdr_q16,
+    provenance: vdr_provenance,
 };
 // sizeof = 44 bytes. Padded to 48 for alignment.
 ```
@@ -227,10 +227,10 @@ struct vlp_fact {
 ### 4.3 KB Type
 
 ```
-struct vlp_kb {
+struct vdr_kb {
     // Identity
-    id: vlp_id,                  // i64: positive = global, negative = session
-    parent_id: vlp_id,           // i64: -1 special = no parent (root)
+    id: vdr_id,                  // i64: positive = global, negative = session
+    parent_id: vdr_id,           // i64: -1 special = no parent (root)
     name_offset: i32,            // offset into text store
     name_length: i16,
     path_offset: i32,
@@ -279,7 +279,7 @@ struct vlp_kb {
     // Metadata
     visibility: i8,              // 0=public, 1=internal, 2=owner_only
     frozen: i8,
-    owner_id: vlp_id,            // i64: owner user ID
+    owner_id: vdr_id,            // i64: owner user ID
     created_at: i32,
     last_modified: i32,
 };
@@ -289,7 +289,7 @@ struct vlp_kb {
 ### 4.4 Prolog Types
 
 ```
-enum vlp_term_type: i8 {
+enum vdr_term_type: i8 {
     TERM_ATOM       = 0,
     TERM_VARIABLE   = 1,
     TERM_INTEGER    = 2,
@@ -302,17 +302,17 @@ enum vlp_term_type: i8 {
     TERM_PAIR       = 9,
 };
 
-struct vlp_term {
-    type: vlp_term_type,
+struct vdr_term {
+    type: vdr_term_type,
     primary_id: i32,         // atom_id | var_id | int_value | functor_id
     secondary_offset: i32,   // text_offset | list_head_offset | args_offset
     secondary_aux: i32,      // text_length | list_tail_offset | args_count
-    vdr_value: vlp_q16,
+    vdr_value: vdr_q16,
 };
 // sizeof = 24 bytes.
 
-struct vlp_rule {
-    id: vlp_id,              // i64
+struct vdr_rule {
+    id: vdr_id,              // i64
     head: i32,               // offset to head term
     body_offset: i32,
     body_count: i16,
@@ -323,16 +323,16 @@ struct vlp_rule {
     success_count: i32,
     failure_count: i32,
     created_at: i32,
-    creator_session_id: vlp_id,
+    creator_session_id: vdr_id,
 };
 // sizeof = 48 bytes.
 
-struct vlp_binding {
+struct vdr_binding {
     var_id: i32,
     bound_term_offset: i32,
 };
 
-struct vlp_unification_result {
+struct vdr_unification_result {
     unified: i8,
     bindings_offset: i32,
     bindings_count: i16,
@@ -342,7 +342,7 @@ struct vlp_unification_result {
 ### 4.5 Grammar Types
 
 ```
-enum vlp_slot_type: i8 {
+enum vdr_slot_type: i8 {
     SLOT_VDR_VALUE  = 0,
     SLOT_TEXT       = 1,
     SLOT_INTEGER    = 2,
@@ -351,36 +351,36 @@ enum vlp_slot_type: i8 {
     SLOT_GRAMMAR    = 5,
 };
 
-struct vlp_grammar {
-    id: vlp_id,
+struct vdr_grammar {
+    id: vdr_id,
     template_offset: i32,
     template_length: i32,
     slots_offset: i32,
     slots_count: i16,
     validated: i8,
     created_at: i32,
-    creator_session_id: vlp_id,
+    creator_session_id: vdr_id,
 };
 ```
 
 ### 4.6 Session Types
 
 ```
-enum vlp_session_state: i8 {
+enum vdr_session_state: i8 {
     SESSION_ACTIVE      = 0,
     SESSION_SNAPSHOTTED = 1,
     SESSION_KILLED      = 2,
     SESSION_FROZEN      = 3,
 };
 
-struct vlp_session {
-    id: vlp_id,                  // global UUID for the session
-    user_id: vlp_id,
-    kb_root_id: vlp_id,          // global root KB
-    session_root_id: vlp_id,   // always negative, session's scratch tree root
+struct vdr_session {
+    id: vdr_id,                  // global UUID for the session
+    user_id: vdr_id,
+    kb_root_id: vdr_id,          // global root KB
+    session_root_id: vdr_id,   // always negative, session's scratch tree root
     session_next_id: i64,      // next session ID to assign (decrements)
     visibility_level: i8,
-    state: vlp_session_state,
+    state: vdr_session_state,
 
     // Core assignment
     core_id: i32,                // which physical core this session runs on
@@ -405,23 +405,23 @@ struct vlp_session {
     command_tokens_consumed: i64,
 
     // Snapshot
-    last_snapshot_id: vlp_id,
+    last_snapshot_id: vdr_id,
     last_snapshot_timestamp: i32,
 
     // Clone lineage
-    parent_session_id: vlp_id,
+    parent_session_id: vdr_id,
     clone_generation: i32,
 };
 ```
 
 ### 4.7 Runner, Grant, Audit, Command Types
 
-These are identical to v0.1 except all `i32` ID fields become `vlp_id` (i64). The structures, enums, and semantics are unchanged. Runner types (poller, processor, internal, batch), grant classes (filesystem, compile, execute, lint, network, process), audit actions (15 types), and command types (15 types) remain the same.
+These are identical to v0.1 except all `i32` ID fields become `vdr_id` (i64). The structures, enums, and semantics are unchanged. Runner types (poller, processor, internal, batch), grant classes (filesystem, compile, execute, lint, network, process), audit actions (15 types), and command types (15 types) remain the same.
 
 ### 4.8 Confidence Table
 
 ```
-const CONFIDENCE_TABLE = [11]vlp_q16{
+const CONFIDENCE_TABLE = [11]vdr_q16{
     .{ .v = 65536, .r0 = 0, .r1 = 0 },   // vdr_computation 1/1
     .{ .v = 65536, .r0 = 0, .r1 = 0 },   // prolog_derivation 1/1
     .{ .v = 64225, .r0 = 0, .r1 = 0 },   // database 98/100
@@ -445,12 +445,12 @@ const CONFIDENCE_TABLE = [11]vlp_q16{
 Every arena is a fixed-size contiguous block allocated at startup via `std.heap.ArenaAllocator` backed by `std.heap.page_allocator`. Bump pointer allocation only. No free. No reuse until arena reset.
 
 ```
-struct vlp_arena {
+struct vdr_arena {
     base: [*]u8,          // start of arena
     size: usize,          // total bytes
     cursor: usize,        // next free byte (bump pointer)
     
-    fn alloc(self: *vlp_arena, bytes: usize, alignment: usize) ?[*]u8 {
+    fn alloc(self: *vdr_arena, bytes: usize, alignment: usize) ?[*]u8 {
         const aligned = (self.cursor + alignment - 1) & ~(alignment - 1);
         if (aligned + bytes > self.size) return null;
         const ptr = self.base + aligned;
@@ -458,11 +458,11 @@ struct vlp_arena {
         return ptr;
     }
     
-    fn reset(self: *vlp_arena) void {
+    fn reset(self: *vdr_arena) void {
         self.cursor = 0;
     }
     
-    fn usedBytes(self: *vlp_arena) usize {
+    fn usedBytes(self: *vdr_arena) usize {
         return self.cursor;
     }
 };
@@ -503,7 +503,7 @@ Fits comfortably in 16 GB laptop with room for OS and other apps.
 ### 5.3 NUMA Alignment
 
 ```
-vlp_numa_init() -> vlp_status
+vdr_numa_init() -> vdr_status
     1. Detect physical core count via std.Thread.getCpuCount().
     2. For each physical core:
        a. Allocate per-core arena via page_allocator (OS gives
@@ -588,9 +588,9 @@ At AVX2 throughput (8 i32 MACs/cycle, 3 GHz, 1 port):
 Parallelization: split GEMM rows across cores. Thread K computes rows [K×chunk, (K+1)×chunk). Synchronize via atomic counter after each layer.
 
 ```
-vlp_gemm(A: []const i32, B: []const i32, C: []i32,
+vdr_gemm(A: []const i32, B: []const i32, C: []i32,
          M: i32, N: i32, K: i32,
-         thread_pool: *vlp_thread_pool) void
+         thread_pool: *vdr_thread_pool) void
     // Each thread computes a chunk of rows
     // Row i of C = dot(A[i,:], B[:,j]) for all j
     // Inner loop uses simd_dot_product
@@ -603,7 +603,7 @@ vlp_gemm(A: []const i32, B: []const i32, C: []i32,
 Same algorithm as the proven toy model. No float.
 
 ```
-vlp_softmax_exact(logits: []i32, probs: []i32, n: i32, D: i32) void
+vdr_softmax_exact(logits: []i32, probs: []i32, n: i32, D: i32) void
     1. Find max (SIMD scan)
     2. Compute int_exp(logit[i] - max) for each i
     3. Sum all exp values
@@ -619,7 +619,7 @@ vlp_softmax_exact(logits: []i32, probs: []i32, n: i32, D: i32) void
 Integer RMSNorm using Newton-Raphson for inverse square root:
 
 ```
-vlp_rmsnorm(input: []i32, output: []i32, gamma: []const i32, n: i32) void
+vdr_rmsnorm(input: []i32, output: []i32, gamma: []const i32, n: i32) void
     1. Compute mean of squares: sum(x[i]^2) / n (SIMD reduction)
     2. Newton-Raphson for 1/sqrt(mean_sq): 4 iterations in i64
     3. output[i] = (input[i] * inv_rms * gamma[i]) / D^2
@@ -628,12 +628,12 @@ vlp_rmsnorm(input: []i32, output: []i32, gamma: []const i32, n: i32) void
 ### 6.5 Attention
 
 ```
-vlp_attention(Q: []i32, K_cache: []i32, V_cache: []i32,
+vdr_attention(Q: []i32, K_cache: []i32, V_cache: []i32,
               output: []i32, config: *attn_config) void
     1. For each head:
        a. scores[pos] = dot(Q_head, K_cache[pos]) * scale / D
        b. Apply causal mask (set future to -MAXINT)
-       c. vlp_softmax_exact(scores)  // exact unity
+       c. vdr_softmax_exact(scores)  // exact unity
        d. output_head = weighted sum of V_cache by scores
     2. Concatenate heads, output projection via GEMM
 ```
@@ -641,17 +641,17 @@ vlp_attention(Q: []i32, K_cache: []i32, V_cache: []i32,
 ### 6.6 Thread Pool
 
 ```
-struct vlp_thread_pool {
+struct vdr_thread_pool {
     threads: [MAX_CORES]std.Thread,
-    arenas: [MAX_CORES]*vlp_arena,
+    arenas: [MAX_CORES]*vdr_arena,
     n_cores: i32,
     
     // Work distribution for GEMM
     barrier_counter: std.atomic.Value(i32),
-    current_work: *vlp_work_item,
+    current_work: *vdr_work_item,
 };
 
-struct vlp_work_item {
+struct vdr_work_item {
     op: enum { gemm, softmax, idle },
     // GEMM params
     A: []const i32, B: []const i32, C: []i32,
@@ -745,11 +745,11 @@ Domain KBs carry their own weights alongside data and rules.
 ### 8.1 Full Cycle
 
 ```
-vlp_inference_cycle(session: vlp_session_handle, input: []const u8,
-                    output: *vlp_output_buffer) -> vlp_status
+vdr_inference_cycle(session: vdr_session_handle, input: []const u8,
+                    output: *vdr_output_buffer) -> vdr_status
 
     // Phase 1: Input Processing
-    tokens = vlp_tokenize(input);
+    tokens = vdr_tokenize(input);
 
     // Phase 2: Context Assembly
     // Context is approximately constant size regardless of turn number.
@@ -762,29 +762,29 @@ vlp_inference_cycle(session: vlp_session_handle, input: []const u8,
     // Those are in KBs (global or session).
 
     // Phase 3: Check which model KBs this session can access
-    visible_layers = vlp_access_resolve_model(session);
+    visible_layers = vdr_access_resolve_model(session);
     // If user has partial model access, forward pass uses only those layers.
 
     // Phase 4: LLM Forward Pass
-    logits = vlp_forward(context, visible_layers, session.core_id);
+    logits = vdr_forward(context, visible_layers, session.core_id);
     // SIMD GEMM across all cores, synchronized per layer.
 
     // Phase 5: Generation Loop
     loop {
-        token = vlp_sample(logits, sampling_config);
+        token = vdr_sample(logits, sampling_config);
 
         if is_command_start(token):
-            command = vlp_generate_command(session);  // constrained vocab
-            result = vlp_command_execute(session, command);
+            command = vdr_generate_command(session);  // constrained vocab
+            result = vdr_command_execute(session, command);
             // Result goes to scratchpad (session KB)
-            vlp_kb_assert(session.session_root_id, scratchpad_slot, result);
+            vdr_kb_assert(session.session_root_id, scratchpad_slot, result);
 
         elif is_direct_output(token):
-            kb_url = vlp_parse_kb_url(token_stream);
-            data = vlp_kb_read(kb_url.kb_id, kb_url.slot_id);
-            grammar = vlp_grammar_inherit(kb_url.kb_id);
-            if grammar: vlp_grammar_render(grammar, data, output);
-            else: vlp_render_fact(data, output);
+            kb_url = vdr_parse_kb_url(token_stream);
+            data = vdr_kb_read(kb_url.kb_id, kb_url.slot_id);
+            grammar = vdr_grammar_inherit(kb_url.kb_id);
+            if grammar: vdr_grammar_render(grammar, data, output);
+            else: vdr_render_fact(data, output);
 
         elif is_end_of_turn(token):
             break;
@@ -793,7 +793,7 @@ vlp_inference_cycle(session: vlp_session_handle, input: []const u8,
             // Prose token — judgment and framing
             output.append(token);
 
-        logits = vlp_forward_single(token, visible_layers, session.core_id);
+        logits = vdr_forward_single(token, visible_layers, session.core_id);
     }
 
     // Phase 6: Post-Processing
@@ -802,7 +802,7 @@ vlp_inference_cycle(session: vlp_session_handle, input: []const u8,
 
     // Phase 7: Auto-Snapshot
     if session.current_turn % auto_snapshot_interval == 0:
-        vlp_session_snapshot(session);
+        vdr_session_snapshot(session);
 ```
 
 ### 8.2 Execution Levels
@@ -843,16 +843,16 @@ CMD_KB_ASSERT root.ops.incidents.inc_042 fact(source, session_root.notes.investi
 No bridge layer. All operations are direct pointer arithmetic into arena memory:
 
 ```
-vlp_kb_store_fact_write(kb_id: vlp_id, slot_id: i32, fact: *vlp_fact) -> vlp_status
+vdr_kb_store_fact_write(kb_id: vdr_id, slot_id: i32, fact: *vdr_fact) -> vdr_status
     // Resolve arena: if kb_id.isGlobal() → global arena, else → session's per-core arena
-    // Compute offset: kb.facts_offset + slot_id * sizeof(vlp_fact)
+    // Compute offset: kb.facts_offset + slot_id * sizeof(vdr_fact)
     // Direct memcpy into arena. O(1). No syscall.
 
-vlp_kb_store_fact_read(kb_id: vlp_id, slot_id: i32) -> ?*vlp_fact
+vdr_kb_store_fact_read(kb_id: vdr_id, slot_id: i32) -> ?*vdr_fact
     // Same arena resolution. Return pointer directly into arena memory.
     // No copy. Caller reads from arena. Read-only for global, read-write for session.
 
-vlp_kb_store_scoped_search(start_kb_id: vlp_id, tag: vlp_fact_tag, max_depth: i32) -> search_result
+vdr_kb_store_scoped_search(start_kb_id: vdr_id, tag: vdr_fact_tag, max_depth: i32) -> search_result
     // Walk parent chain. If start is session (-), walk session tree first,
     // then cross to global (+) at the session's kb_root_id junction.
     // Session KBs shadow global KBs at the same path position.
@@ -886,7 +886,7 @@ Clone sessions share the parent's global KB references and get a COW copy of the
 Direct function calls into arena memory. No dispatch, no bridge:
 
 ```
-vlp_prolog_unify(a: *vlp_term, b: *vlp_term, bindings: []vlp_binding, n: *i32) -> bool
+vdr_prolog_unify(a: *vdr_term, b: *vdr_term, bindings: []vdr_binding, n: *i32) -> bool
     // ATOM-ATOM: a.primary_id == b.primary_id (integer comparison)
     // VARIABLE-anything: bind
     // VDR-VDR: a.vdr_value.v == b.vdr_value.v AND a.vdr_value.r0 == b.vdr_value.r0
@@ -894,13 +894,13 @@ vlp_prolog_unify(a: *vlp_term, b: *vlp_term, bindings: []vlp_binding, n: *i32) -
     // COMPOUND-COMPOUND: functors match + recursive arg unification
     // All integer comparisons. No float. No epsilon.
 
-vlp_prolog_query(kb_store: *vlp_kb_store, start_kb_id: vlp_id, query: *vlp_term) -> query_result
+vdr_prolog_query(kb_store: *vdr_kb_store, start_kb_id: vdr_id, query: *vdr_term) -> query_result
     // Depth-first search with backtracking.
     // Iterative with explicit stack (in per-core arena scratch).
     // Searches session tree first if start_kb_id is session.
     // Crosses to global tree at session junction point.
 
-vlp_prolog_fire_and_commit(kb_store: *vlp_kb_store, kb_id: vlp_id) -> i32
+vdr_prolog_fire_and_commit(kb_store: *vdr_kb_store, kb_id: vdr_id) -> i32
     // Match rules against facts. Fire satisfied rules.
     // Write derived facts with PROLOG_DERIVATION confidence (1/1).
     // Returns number of rules fired.
@@ -913,16 +913,16 @@ vlp_prolog_fire_and_commit(kb_store: *vlp_kb_store, kb_id: vlp_id) -> i32
 ### 11.1 Binary Layout
 
 Same as v0.1 with two changes:
-- All ID fields are now i64 (vlp_id) instead of i32
+- All ID fields are now i64 (vdr_id) instead of i32
 - Session region included in snapshot
 
 ```
-struct vlp_snapshot_header {
+struct vdr_snapshot_header {
     magic: [4]u8,            // "VLPS"
     version: i32,            // 2 (bumped for i64 IDs)
     timestamp: i32,
-    session_id: vlp_id,      // i64
-    user_id: vlp_id,         // i64
+    session_id: vdr_id,      // i64
+    user_id: vdr_id,         // i64
 
     // Global region sizes (bytes) — only session's visible subset
     kb_region_size: i64,
@@ -940,7 +940,7 @@ struct vlp_snapshot_header {
     session_next_id: i64,
 
     // Session metadata
-    session_metadata: vlp_session,
+    session_metadata: vdr_session,
 
     // Integrity
     checksum: i32,           // CRC32
@@ -954,7 +954,7 @@ Snapshot captures both global (session's view) and session state. Restore is bit
 
 ## 12. Seed Layer
 
-Identical to v0.1 except IDs are now vlp_id (i64, positive):
+Identical to v0.1 except IDs are now vdr_id (i64, positive):
 
 ```
 root                          id: +1
@@ -985,7 +985,7 @@ root                          id: +1
 ## 13. Configuration
 
 ```
-struct vlp_system_config {
+struct vdr_system_config {
     // Hardware
     n_cores: i32,                    // 0 = auto-detect
     
@@ -1068,29 +1068,29 @@ INVARIANT_14: SIMD GEMM produces identical results to scalar GEMM.
 ## 16. Implementation Files
 
 ```
-vlp_types.zig         — Q16 (v,r0,r1), vlp_id, Fact, KB, Term, Rule, Session, etc.
-vlp_shared.zig        — constants, D, exp table, field offsets, enums
-vlp_arena.zig         — fixed-size arena allocator, bump pointer, reset
-vlp_numa.zig          — core detection, thread pinning, arena-per-core
-vlp_thread_pool.zig   — pinned threads, GEMM work distribution, atomic barrier
-vlp_ops.zig           — SIMD: gemm, dot, softmax, rmsnorm, attention, silu
-vlp_model.zig         — KB-based model loading, layer dispatch, forward pass
-vlp_kb_store.zig      — KB CRUD, fact/rule/term stores, path index, COW, session resolution
-vlp_prolog.zig        — unification, query, rule firing, backtracking
-vlp_grammar.zig       — template compile, render, inherit
-vlp_session.zig       — session lifecycle, session tree, clone/merge/kill
-vlp_snapshot.zig      — save/restore, diff, merge, CRC32
-vlp_runner.zig        — poller, processor, internal, batch runners
-vlp_inference.zig     — full inference loop, L1/L2/L3, context assembly
-vlp_command.zig       — command parser, executor, KB/Prolog/grammar dispatch
-vlp_access.zig        — visibility check, session/global resolution
-vlp_grant.zig         — grant CRUD, check, cleanup
-vlp_audit.zig         — ring buffer, query, filter
-vlp_confidence.zig    — assign, combine, chain, propagate
-vlp_seed.zig          — seed layer init, model weight KB creation
-vlp_builtin.zig       — 448 builtins, IOSE validation, dispatch
-vlp_system.zig        — top-level init, wire everything, config
-vlp_test.zig          — determinism, roundtrip, isolation, SIMD correctness
+vdr_types.zig         — Q16 (v,r0,r1), vdr_id, Fact, KB, Term, Rule, Session, etc.
+vdr_shared.zig        — constants, D, exp table, field offsets, enums
+vdr_arena.zig         — fixed-size arena allocator, bump pointer, reset
+vdr_numa.zig          — core detection, thread pinning, arena-per-core
+vdr_thread_pool.zig   — pinned threads, GEMM work distribution, atomic barrier
+vdr_ops.zig           — SIMD: gemm, dot, softmax, rmsnorm, attention, silu
+vdr_model.zig         — KB-based model loading, layer dispatch, forward pass
+vdr_kb_store.zig      — KB CRUD, fact/rule/term stores, path index, COW, session resolution
+vdr_prolog.zig        — unification, query, rule firing, backtracking
+vdr_grammar.zig       — template compile, render, inherit
+vdr_session.zig       — session lifecycle, session tree, clone/merge/kill
+vdr_snapshot.zig      — save/restore, diff, merge, CRC32
+vdr_runner.zig        — poller, processor, internal, batch runners
+vdr_inference.zig     — full inference loop, L1/L2/L3, context assembly
+vdr_command.zig       — command parser, executor, KB/Prolog/grammar dispatch
+vdr_access.zig        — visibility check, session/global resolution
+vdr_grant.zig         — grant CRUD, check, cleanup
+vdr_audit.zig         — ring buffer, query, filter
+vdr_confidence.zig    — assign, combine, chain, propagate
+vdr_seed.zig          — seed layer init, model weight KB creation
+vdr_builtin.zig       — 448 builtins, IOSE validation, dispatch
+vdr_system.zig        — top-level init, wire everything, config
+vdr_test.zig          — determinism, roundtrip, isolation, SIMD correctness
 build.zig             — single native x86_64 target
 
 23 files. ~18K lines estimated.
@@ -1102,39 +1102,39 @@ build.zig             — single native x86_64 target
 
 ```
 Stage 1: Foundation
-    vlp_types, vlp_shared, vlp_arena, vlp_numa, vlp_thread_pool
-    vlp_kb_store (global + session), vlp_access
-    vlp_ops (scalar only, no SIMD yet)
+    vdr_types, vdr_shared, vdr_arena, vdr_numa, vdr_thread_pool
+    vdr_kb_store (global + session), vdr_access
+    vdr_ops (scalar only, no SIMD yet)
     Basic session with session tree
     Deliverable: KBs with dual addressing, arena allocation, session writes.
     ~4,000 lines.
 
 Stage 2: Intelligence
-    vlp_prolog, vlp_grammar, vlp_builtin (pure builtins)
-    vlp_session (snapshot, clone, merge, kill)
-    vlp_grant, vlp_audit, vlp_confidence
-    vlp_command (parse + execute)
+    vdr_prolog, vdr_grammar, vdr_builtin (pure builtins)
+    vdr_session (snapshot, clone, merge, kill)
+    vdr_grant, vdr_audit, vdr_confidence
+    vdr_command (parse + execute)
     Deliverable: full Prolog, grammars, grants, L1→L2→L3 possible.
     ~6,000 lines.
 
 Stage 3: Compute
-    vlp_ops (AVX2 SIMD: gemm, softmax, rmsnorm, attention, silu)
-    vlp_model (KB-distributed weights, grant-gated forward pass)
-    vlp_inference (full loop)
-    vlp_thread_pool (multi-core GEMM)
+    vdr_ops (AVX2 SIMD: gemm, softmax, rmsnorm, attention, silu)
+    vdr_model (KB-distributed weights, grant-gated forward pass)
+    vdr_inference (full loop)
+    vdr_thread_pool (multi-core GEMM)
     Deliverable: LLM inference at ~300 tok/s on laptop.
     ~4,000 lines.
 
 Stage 4: Operations
-    vlp_runner (all 4 types)
-    vlp_builtin (44 operational builtins)
-    vlp_seed (full seed layer + model loading)
-    vlp_system (daemon mode)
+    vdr_runner (all 4 types)
+    vdr_builtin (44 operational builtins)
+    vdr_seed (full seed layer + model loading)
+    vdr_system (daemon mode)
     Deliverable: autonomous operation.
     ~3,000 lines.
 
 Stage 5: Testing
-    vlp_test (full suite)
+    vdr_test (full suite)
     Determinism, SIMD correctness, snapshot roundtrip,
     session isolation, access control, confidence propagation.
     ~1,000 lines.
