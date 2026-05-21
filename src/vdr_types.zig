@@ -1617,80 +1617,107 @@ pub const ScratchpadEntry = struct {
 // ============================================================
 
 pub const RelationType = enum(i32) {
-    // Structural (1000-1019)
-    enables = 1000,
-    requires,
-    prevents,
-    implements,
-    extends,
-    overrides,
-    validates,
-    verified_by,
-    contradicts,
-    causes,
-    determined_by,
-    depends_on,
-    equivalent_to,
-    approximates,
-    specializes,
-    generalizes,
-    part_of,
-    contains,
-    follows,
-    precedes,
+    // Structural (1000+)
+    enables = 1000, // X makes Y possible or functional
+    requires, // X cannot exist or work without Y
+    prevents, // X blocks or forbids Y; symmetric
+    implements, // X is a concrete realization of abstract Y
+    extends, // X adds capability to Y without replacing
+    overrides, // X replaces Y's behavior in a scope
+    validates, // X confirms Y is correct
+    verified_by, // Y was confirmed by X
+    contradicts, // X and Y cannot both hold; symmetric
+    causes, // X directly produces Y as effect
+    determined_by, // Y's value or form is strictly fixed by X
+    depends_on, // X needs Y to function
+    equivalent_to, // X and Y are interchangeable; symmetric
+    approximates, // X and Y are close but not identical; symmetric
+    specializes, // X is a more specific form of Y
+    generalizes, // X is a more general form of Y
+    part_of, // X is a component inside Y
+    contains, // Y is a component inside X
+    follows, // X comes after Y in sequence
+    precedes, // X comes before Y in sequence
+    forces, // disruption/pressure compels response/adaptation
+    overcomes, // removes or breaks an active constraint
+    triggered_by, // Y initiated X but doesn't fully determine it
+    explains, // mechanism/theory accounts for observed phenomenon
+    replaces, // X supersedes Y in same functional role
+    motivates, // failure/anomaly provides impetus for new development
+    limits, // reveals boundary or incompleteness of
+    confers, // grants a property or capability to
+    unifies, // integrates previously separate entities into single framework
+    foundation_for, // provides axiomatic ground from which Y is built
+    constrains, // imposes limitation or restriction on Y
 
-    // Identity and binding (2000-2009)
-    instance_of = 2000,
-    has_type,
-    named,
-    aliases,
-    references,
-    assigns,
-    binds_to,
-    returns,
-    accepts,
-    emits,
+    // Identity and binding (2000+)
+    instance_of = 2000, // X is a particular case of Y
+    has_type, // X has type Y
+    named, // X has the name Y
+    aliases, // X is an alternative identifier for Y; symmetric
+    references, // X points to or cites Y
+    assigns, // X gives value Y in a binding context
+    binds_to, // X is bound to Y in a scope
+    returns, // X produces Y as output
+    accepts, // X takes Y as input
+    emits, // X produces Y as a side output
+    complement_of, // X is the set-theoretic complement of Y within a scope; symmetric
+    constructed_from, // X is formally built using Y as axioms/definitions/method
 
-    // Knowledge structure (3000-3011)
-    knowledge_base = 3000,
-    domain,
-    scoped_to,
-    context_of,
-    defined_in,
-    documented_by,
-    example_of,
-    derived_from,
-    composed_of,
-    decomposes_to,
-    transforms_to,
-    measured_by,
+    // Knowledge structure (3000+)
+    knowledge_base = 3000, // X is stored in knowledge base Y
+    domain, // X belongs to domain Y
+    scoped_to, // X is valid only within scope Y
+    context_of, // X is the broader situation Y occurs within
+    defined_in, // X is defined in source Y
+    documented_by, // X is documented by Y
+    example_of, // X is an example of Y
+    derived_from, // X is derived from source Y
+    composed_of, // X is structurally built from parts Y
+    decomposes_to, // X breaks down into components Y
+    transforms_to, // X becomes Y through a defined operation
+    measured_by, // X is quantified by measurement Y
+    studies, // field X has Y as its subject matter
+    distinguishes, // criterion X separates Y into distinct categories
 
-    // Agency and action (4000-4009)
-    agent_of = 4000,
-    object_of,
-    instrument_of,
-    location_of,
-    destination_of,
-    source_of,
-    purpose_of,
-    result_of,
-    manner_of,
-    time_of,
+    // Agency and action (4000+)
+    agent_of = 4000, // X is the agent performing action Y
+    object_of, // X is the object receiving action Y
+    instrument_of, // X is the tool used in action Y
+    location_of, // X is where Y occurs
+    destination_of, // X is where Y is directed toward
+    source_of, // X is where Y originates from
+    purpose_of, // X is the reason for Y
+    result_of, // X is the outcome of Y
+    manner_of, // X describes how Y is performed
+    time_of, // X is when Y occurs
 
-    // Condition and logic (5000-5009)
-    if_then = 5000,
-    unless,
-    while_true,
-    for_each,
-    exists,
-    not_exists,
-    and_also,
-    or_else,
-    greater_than,
-    less_than,
+    // Condition and logic (5000+)
+    if_then = 5000, // if X holds then Y follows
+    unless, // Y holds unless X is true
+    while_true, // Y continues while X holds
+    for_each, // Y applies to each instance of X
+    exists, // at least one X satisfies Y
+    not_exists, // no X satisfies Y
+    and_also, // both X and Y hold
+    or_else, // X or Y holds (inclusive)
+    greater_than, // X > Y in ordered comparison
+    less_than, // X < Y in ordered comparison
+
+    // Grammar and language structure (6000+)
+    governs = 6000, // X dictates the form of Y
+    applies_to, // rule X is relevant to class Y
+    violates, // anti-pattern X breaks rule Y
+    agrees_with, // X matches Y in grammatical features
+    selects, // X determines which form Y takes
+    modifies, // X restricts or describes Y
+    heads, // X is the obligatory central word of phrase Y
+    complements, // X completes the meaning of head Y
+    subcategorizes, // head X requires complement type Y
+    distributes_as, // phrase X occupies same positions as category Y
 
     // Domain-registerable (10000 to 20000)
-    domain_0 = 10000,
+    domain_0 = 1_000_000,
     domain_1,
     domain_2,
 
