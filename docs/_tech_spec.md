@@ -1391,7 +1391,7 @@ Thumbs up/down on output elements feed the review queue. Success and failure cou
 
 ### 15.4 Distribution
 
-Steam for consumer distribution with Workshop as the mod store for user-contributed compacted knowledge domains. Consumer price: $19.99 with floor at $15.99 (20% off). Enterprise: $100/year per seat (active install, server or workstation). Enterprise sales via Stripe with static website. No DRM — compliance is contractual for enterprise, copyright law for piracy.
+Steam for consumer distribution with Workshop as the mod store for user-contributed compacted knowledge domains.
 
 ### 15.5 Knowledge Base Distribution
 
