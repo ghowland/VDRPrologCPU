@@ -421,6 +421,18 @@ pub const KB = struct {
     // accelerates rule head lookup by functor/arity
     functor_index_offset: i32 = -1,
 
+    // offset to Fsm struct in arena, -1 if this KB has no state machine
+    // a KB can have at most one FSM — it tracks operational state of
+    // whatever this KB represents (session lifecycle, request lifecycle,
+    // conversation phase, NPC behavior state, etc.)
+    fsm_offset: i32 = -1,
+
+    // offset to BehaviorSet struct in arena, -1 if this KB has no scoring
+    // a KB can have at most one behavior set — scored when the FSM's
+    // current state points to this KB as its behavior set, or scored
+    // directly without an FSM for standalone scoring decisions
+    behavior_set_offset: i32 = -1,
+
     // true if this KB has a functor index for fast rule head lookup
     pub fn hasFunctorIndex(self: KB) bool {
         return self.functor_index_offset != -1;
@@ -463,6 +475,13 @@ pub const KB = struct {
     }
     pub fn hasDomainRelDefs(self: KB) bool {
         return self.domain_rel_defs_offset != -1 and self.domain_rel_defs_count > 0;
+    }
+    pub fn isBehaviorSet(self: KB) bool {
+        return self.behavior_set_offset != -1;
+    }
+    // true if this KB has an FSM tracking its operational state
+    pub fn hasFsm(self: KB) bool {
+        return self.fsm_offset != -1;
     }
 };
 
@@ -1339,6 +1358,8 @@ pub const BuiltinCategory = enum(i32) {
     op_lint = 19,
     op_network = 20,
     op_process = 21,
+    scoring = 22, // utility AI scoring builtins
+
 };
 
 pub const BuiltinArgs = struct {
@@ -1382,6 +1403,8 @@ pub const QueryResult = struct {
     depth_reached: i32 = 0,
     depth_exceeded: bool = false,
     status: Status = .{},
+    // which priority level resolved this query (for statistics)
+    resolution_priority: i8 = 6, // default = general Prolog (priority 6)
 };
 
 pub const FireResult = struct {
@@ -1629,6 +1652,9 @@ pub const PrologConfig = struct {
     max_depth: i32 = 100,
     max_bindings: i32 = 1000,
     max_results: i32 = 100,
+    // maximum ancestor chain depth for inheritance rules
+    // prevents runaway specializes/instance_of chains
+    max_inheritance_depth: i32 = 32,
 };
 
 // ============================================================
@@ -2526,6 +2552,207 @@ pub const BatchConfig = struct {
 };
 
 // ============================================================
+// Prolog Engine
+// ============================================================
+
+// The Prolog engine instance. One per session, holds no mutable state between queries.
+// All per-query state lives in scratch arena allocations.
+pub const PrologEngine = struct {
+    // KB store for fact/rule/relation access (shared, read-only for global)
+    store: *KbStore = undefined,
+    // per-core scratch arena for all working memory
+    scratch: *Arena = undefined,
+    // session for scope resolution
+    session: *Session = undefined,
+    // global arena for read-only access
+    global_arena: *Arena = undefined,
+    // atom-to-RelationType cache
+    atom_rel_cache: *AtomRelTypeCache = undefined,
+    // statistics tracking (written per-query)
+    level_stats: *LevelStats = undefined,
+    // config limits (max_depth, max_bindings, max_results)
+    config: PrologConfig = .{},
+};
+
+// A frame on the explicit search stack for depth-first Prolog resolution.
+// Lives in per-core scratch. Destroyed on query completion.
+pub const SearchFrame = struct {
+    // the goal term to resolve at this depth
+    goal: *Term = undefined,
+    // KB scope for rule search at this frame
+    kb_id: VdrId = .{},
+    // index into matching rules — incremented on backtrack to try next candidate
+    rule_index: i32 = 0,
+    // binding stack mark for rollback on backtrack
+    binding_mark: i32 = 0,
+};
+
+// Result of finding a rule whose head unifies with the current goal.
+// Ephemeral — used within the search loop, not stored.
+pub const MatchResult = struct {
+    // the matched rule
+    rule: *Rule = undefined,
+    // where to resume searching on backtrack (next rule after this one)
+    next_rule_index: i32 = 0,
+    // bindings produced by the unification
+    new_bindings: []Binding = &.{},
+    // count of new bindings
+    new_binding_count: i32 = 0,
+};
+
+// Runtime KB store. Manages all KB data across global and session arenas.
+// One instance per system, shared by all sessions (read-only for global data).
+// Methods implemented in vdr_kb_store.zig.
+pub const KbStore = struct {
+    // global arena where all persistent KB data lives
+    global_arena: *Arena = undefined,
+
+    // path hash → VdrId lookup table for O(1) path resolution
+    path_index_offset: i32 = -1,
+
+    // path index capacity (number of hash buckets)
+    path_index_capacity: i32 = 0,
+
+    // loaded KB lookup table: VdrId → *KB for O(1) direct access
+    // offset into global arena where the LUT array lives
+    loaded_lut_offset: i32 = -1,
+
+    // loaded LUT capacity
+    loaded_lut_capacity: i32 = 0,
+
+    // number of currently loaded KBs
+    loaded_count: i32 = 0,
+
+    // manifest (loaded at startup, index of all persisted KBs)
+    manifest_offset: i32 = -1,
+
+    // manifest entry count
+    manifest_count: i32 = 0,
+
+    // global ID counter for generating new positive VdrIds
+    next_global_id: i64 = 17, // after seed KBs (1-16)
+
+    // atom table offset (string → atom_id mapping)
+    atom_table_offset: i32 = -1,
+
+    // atom table count
+    atom_count: i32 = 0,
+
+    // atom table capacity
+    atom_capacity: i32 = 0,
+
+    // text store offset (shared text data for all KBs)
+    text_store_offset: i32 = -1,
+
+    // text store cursor (next free byte)
+    text_store_cursor: i32 = 0,
+
+    // text store capacity
+    text_store_capacity: i32 = 0,
+
+    // data directory path for persistence
+    data_dir: [256]u8 = [_]u8{0} ** 256,
+
+    // data directory path length
+    data_dir_length: i32 = 0,
+
+    // generate a new global VdrId (positive, unique)
+    pub fn nextGlobalId(self: *KbStore) VdrId {
+        const id = self.next_global_id;
+        self.next_global_id += 1;
+        return .{ .v = id };
+    }
+
+    // All other methods (resolveKb, createKb, assertFact, retractFact,
+    // readFact, resolveByPath, assertRule, getRuleSlice, getFactSlice,
+    // registerAtom, atomId, storeText, etc.) are implemented in
+    // vdr_kb_store.zig operating on these offsets and the global arena.
+};
+
+// A finite state machine that lives inside a KB, tracking operational
+// state of whatever the KB represents. Same pattern as LRU, queue,
+// counter — it's a data structure the KB uses, not a type of KB.
+//
+// States are atoms in the term store. Transitions are Prolog rules
+// in a child KB. State→BehaviorSet mappings are facts in a child KB.
+// The FSM reads these — it does not own them.
+pub const FsmType = enum(i8) {
+    // output determined by current state (behavior set per state)
+    moore = 0,
+    // output determined by transition (action fires during transition)
+    mealy = 1,
+    // accepts or rejects input (query classification)
+    dfa = 2,
+    // nested states with parallel regions (hierarchical AI)
+    statechart = 3,
+};
+
+pub const Fsm = struct {
+    // unique identifier for this FSM instance
+    id: VdrId = .{},
+
+    // what kind of FSM this is
+    fsm_type: FsmType = .moore,
+
+    // current state as atom ID in the term store
+    current_state: i32 = 0,
+
+    // previous state as atom ID (set before each transition)
+    previous_state: i32 = 0,
+
+    // initial state as atom ID (for reset)
+    initial_state: i32 = 0,
+
+    // offset into the owning KB's fact array where state atom IDs are listed
+    states_offset: i32 = -1,
+
+    // number of valid states
+    states_count: i16 = 0,
+
+    // child KB ID containing transition rules (evolves_to/2 rules)
+    // the owning KB has this as a child — the FSM just knows which one
+    transitions_kb_id: VdrId = .{},
+
+    // child KB ID containing state→behavior_set mapping facts
+    // (moore and statechart only; mealy uses transition actions instead)
+    outputs_kb_id: VdrId = .{},
+
+    // for statechart: parent FSM ID if this is a nested sub-region
+    parent_fsm_id: VdrId = .{},
+
+    // for statechart: offset into owning KB's fact array where child
+    // FSM VdrIds are listed (concurrent regions)
+    children_offset: i32 = -1,
+
+    // number of concurrent child FSMs (statechart regions)
+    children_count: i16 = 0,
+
+    // timestamp of last state transition
+    last_transition_time: i32 = 0,
+
+    // total transitions since creation
+    transition_count: i32 = 0,
+
+    // whether current state is terminal (no outgoing transitions)
+    is_terminal: bool = false,
+
+    // true if the FSM has never transitioned from its initial state
+    pub fn isInitial(self: Fsm) bool {
+        return self.current_state == self.initial_state and self.transition_count == 0;
+    }
+
+    // true if this is a nested sub-machine inside a statechart
+    pub fn isNested(self: Fsm) bool {
+        return !self.parent_fsm_id.isNone();
+    }
+
+    // true if this statechart has concurrent child regions
+    pub fn hasConcurrentRegions(self: Fsm) bool {
+        return self.children_count > 0;
+    }
+};
+
+// ============================================================
 // Seed Config
 // ============================================================
 
@@ -2680,5 +2907,7 @@ pub const SEED = struct {
     pub const FORMATS: VdrId = .{ .v = 12 };
     pub const RELATION_TYPES: VdrId = .{ .v = 13 };
     pub const INGESTION: VdrId = .{ .v = 14 };
-    pub const SEED_KB_COUNT: i32 = 14;
+    pub const SCORING: VdrId = .{ .v = 15 }; // root.system.scoring
+    pub const FSM: VdrId = .{ .v = 16 }; // root.system.fsm
+    pub const SEED_KB_COUNT: i32 = 16;
 };

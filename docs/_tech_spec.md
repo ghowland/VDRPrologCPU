@@ -1618,3 +1618,653 @@ profiles immutable|22|vdr_ingestion.zig|no update after initial write
 per-thread GEMM|23|vdr_ops.zig|no thread_pool param, no row splitting
 lazy loading|24|vdr_persist.zig|manifest only at startup, load on access
 ```
+
+---
+
+# VDR-Prolog Technical Specification — Addendum
+
+## Prolog Knowledge Composition, Utility AI Scoring, and Finite State Machine Integration
+
+### Addendum to Version 0.4
+
+---
+
+## A1. Purpose
+
+This addendum specifies how three mechanical reasoning systems compose into a unified decision pipeline:
+
+**Finite State Machines** determine what state the system is in and which behavior sets are valid. State transitions are Prolog rules — when conditions match, the state updates.
+
+**Utility AI Scoring** evaluates candidate behaviors within the current state's behavior set, scoring each against multiple considerations and selecting the winner via compensated multiplication.
+
+**Prolog Knowledge Composition** provides the reasoning substrate — typed relations, transitive closure, inheritance, inverse dispatch — that both FSMs and UAI considerations read from.
+
+The LLM is the judgment layer. It sees the mechanical results (which state, which behavior was scored highest, what the scores were), can accept or override, and handles situations where the mechanical pipeline has no coverage. The pipeline logs everything to `session_root._llm.prompt_current` so the LLM can direct attention to what changed.
+
+---
+
+## A2. The Unified Pipeline
+
+```
+Current FSM State
+    ↓
+State determines valid BehaviorSet
+    ↓
+UAI evaluates all Behaviors in the set
+    (each Consideration reads context via Prolog queries / KB facts / relation index)
+    ↓
+Scores combined via Dave Mark compensation
+    ↓
+Selection method picks winner
+    ↓
+Result logged to prompt_current (new_items_counter incremented)
+    ↓
+Winner executed (Prolog query, builtin call, KB assert, command)
+    OR
+LLM reads result, overrides, or frames response
+    ↓
+Post-execution: check FSM transition rules
+    ↓
+If transition fires → new state → new behavior set available next cycle
+```
+
+This pipeline runs at L3 when all components resolve mechanically. It drops to L2 when the LLM must select between ambiguous candidates. It drops to L1 when no FSM state, behavior set, or rule covers the situation.
+
+---
+
+## A3. FSM as State Manager
+
+### A3.1 FSM Representation in KBs
+
+An FSM is a KB subtree. The machine definition, states, transitions, and output associations are facts and rules:
+
+```
+root.system.fsm.session_lifecycle          ← machine definition KB
+    states: [created, active, suspended, ejected, killed]
+    initial: created
+    current: active                         ← mutable fact, updated on transition
+
+root.system.fsm.session_lifecycle.transitions   ← transition rules KB
+    rule: evolves_to(created, active) :- session_initialized(Session).
+    rule: evolves_to(active, suspended) :- idle_timeout_exceeded(Session).
+    rule: evolves_to(active, ejected) :- arena_pressure_high, lru_coldest(Session).
+    rule: evolves_to(ejected, active) :- snapshot_exists(Session), restore_requested.
+    rule: evolves_to(active, killed) :- kill_requested(Session).
+
+root.system.fsm.session_lifecycle.outputs      ← state→behavior_set mapping
+    fact: state_behavior_set(active, root.system.scoring.active_session_behaviors)
+    fact: state_behavior_set(suspended, root.system.scoring.suspended_behaviors)
+    fact: state_behavior_set(ejected, root.system.scoring.ejection_behaviors)
+```
+
+### A3.2 FSM Types
+
+The system uses four FSM patterns, each a different KB shape:
+
+**Moore (output per state).** State determines the behavior set. Session lifecycle, KB lifecycle, inference cycle. The behavior set doesn't change until the state changes.
+
+**Mealy (output per transition).** Transition determines the action. HTTP request lifecycle. The action fires during the transition, not after settling into a state.
+
+**DFA (recognition).** Accepts or rejects input patterns. Query classification (is this an L3/L2/L1 query). Level selection FSM.
+
+**Statechart (hierarchical + concurrent).** Nested states with parallel regions. Complex domain AI (boss AI with strategic/tactical/moment layers). Uses `extends` relation on base Moore/Mealy types.
+
+### A3.3 Current State Tracking
+
+Each FSM instance has a mutable `current_state` fact in its machine KB. Updated atomically on transition:
+
+```
+root.system.fsm.session_lifecycle
+    facts[0] = TAG_VALUE: current_state = state_atom_id    ← updated on transition
+    facts[1] = TAG_VALUE: previous_state = state_atom_id   ← set before update
+    facts[2] = TAG_VALUE: last_transition_time = timestamp
+    facts[3] = TAG_VALUE: transition_count = counter
+```
+
+Session-local FSMs (per-session state machines like conversation phase tracking) live in the session's ephemeral tree:
+
+```
+session_root._llm.fsm.conversation_phase
+    current_state = greeting
+    transitions: greeting → information_gathering → deliberation → response → follow_up
+```
+
+### A3.4 Transition Evaluation
+
+Transitions are Prolog rules. The engine checks them on every cycle (or on demand):
+
+```zig
+fn evaluateTransitions(
+    fsm_kb: *KB,
+    engine: *PrologEngine,
+) ?StateTransition {
+    const current = readCurrentState(fsm_kb, engine.global_arena);
+    const transitions_kb = resolveChild(fsm_kb, "transitions", engine.store);
+
+    const rules = getRuleSlice(transitions_kb, engine.global_arena);
+    for (rules) |*rule| {
+        // Rule head: evolves_to(CurrentState, NextState)
+        const head = engine.getTerm(rule.head);
+        if (!head.isCompound()) continue;
+
+        const args = engine.getCompoundArgs(head);
+        const from_state = &args[0];
+        const to_state = &args[1];
+
+        // Check if from_state matches current
+        if (!engine.termMatchesAtom(from_state, current)) continue;
+
+        // Try to satisfy body (transition conditions)
+        const body_result = engine.satisfyBody(rule, engine.config);
+        if (body_result) {
+            return StateTransition{
+                .from = current,
+                .to = engine.termToAtomId(to_state),
+                .rule_id = rule.id,
+                .timestamp = currentTimestamp(),
+            };
+        }
+    }
+
+    return null; // no transition fires
+}
+```
+
+When a transition fires:
+
+1. `previous_state` set to `current_state`.
+2. `current_state` set to the new state.
+3. `last_transition_time` updated.
+4. `transition_count` incremented.
+5. Transition logged to `prompt_current` with the triggering rule ID.
+6. If the FSM is Mealy, the transition's output action executes immediately.
+7. The new state's behavior set becomes active for the next scoring cycle.
+
+---
+
+## A4. State-to-BehaviorSet Binding
+
+### A4.1 The Mapping
+
+Each FSM state maps to a BehaviorSet via `state_behavior_set` facts in the FSM's outputs KB:
+
+```prolog
+state_behavior_set(active, root.system.scoring.active_session_behaviors).
+state_behavior_set(suspended, root.system.scoring.suspended_behaviors).
+state_behavior_set(ejected, root.system.scoring.ejection_behaviors).
+```
+
+Resolution is a single Prolog query:
+
+```prolog
+current_behavior_set(Session, SetId) :-
+    session_fsm(Session, FsmKb),
+    current_state(FsmKb, State),
+    state_behavior_set(State, SetId).
+```
+
+This is L3 — three fact reads, no LLM tokens.
+
+### A4.2 Hierarchical State Machines
+
+For statecharts with nested states, the behavior set is the union of the active states across all hierarchy levels:
+
+```
+root.domain.game.boss_ai.fsm
+    strategic_layer:  current_state = phase_2
+    tactical_layer:   current_state = ranged_attack
+    moment_layer:     current_state = aiming
+
+    state_behavior_set(phase_2, boss_phase2_behaviors)
+    state_behavior_set(ranged_attack, ranged_attack_behaviors)
+    state_behavior_set(aiming, aiming_behaviors)
+```
+
+The scoring system evaluates each layer's behavior set independently (parallel reasoners, RS6 from the UAI spec). Each layer produces a winner. The results compose: strategic decides the phase, tactical decides the action type, moment decides the immediate response.
+
+---
+
+## A5. UAI Scoring Within State Context
+
+### A5.1 Scoring Cycle
+
+On each inference cycle (or on demand), the scoring pipeline runs:
+
+```
+1. Read current FSM state.
+2. Resolve behavior set for this state.
+3. Build ScoringContext from session state, KB data, relation index.
+4. Evaluate all behaviors in the set:
+   a. For each behavior, evaluate all considerations.
+   b. Separate gates from soft preferences.
+   c. Gates checked first — any gate failure eliminates the behavior.
+   d. Soft scores combined via compensated multiplication.
+   e. Behavior weight and floor applied.
+5. Sort behaviors by final score descending.
+6. Select winner via selection method (argmax, weighted random, etc.).
+7. Log result to prompt_current.
+8. Execute winner's action (or defer to LLM).
+```
+
+### A5.2 Considerations Read from Prolog
+
+Considerations can read their input values from any system data source. The critical ones for system-level decisions:
+
+**Relation coverage.** "How many typed relations of the needed type exist?" Reads from RelationIndex `by_type_counts`. High coverage → L3 viable.
+
+**Rule match count.** "How many Prolog rules match this query's functor?" Reads from functor scan or FunctorIndex. High match count → L2 viable.
+
+**Confidence level.** "How confident is the available data?" Reads from Provenance on matching facts. High confidence → trust the mechanical result.
+
+**Arena pressure.** "How full is the global arena?" Reads from `arena.usedBytes() / arena.size`. High pressure → prefer eviction and conservation behaviors.
+
+**Session activity.** "How recently was this session used?" Reads from `last_active_timestamp`. Low recency → candidate for eviction.
+
+**LevelStats ratios.** "What fraction of queries resolve at L3?" Reads from `l3_count / totalCount()`. Declining ratio → compaction pipeline needs more data.
+
+Each of these is a Consideration with an InputSource, a ResponseCurve, and a weight. The curves and weights are facts in KBs — tunable without code changes.
+
+### A5.3 Dave Mark Compensation in Q16
+
+The compensation formula runs entirely in Q16 exact integer arithmetic:
+
+```
+For n considerations with scores s₁..sₙ:
+    modification_factor = (n-1)/n       ← Q16 division with remainder
+    For each sᵢ:
+        make_up = (D - sᵢ) × modification_factor / D
+        compensated_i = sᵢ + (make_up × sᵢ / D)
+    final = ∏(compensated_i)            ← Q16 multiplication chain
+
+No float. No NaN. No infinity. Remainder tracked at every step.
+```
+
+An epsilon floor (default Q16 v=655, approximately 1% of D) prevents true-zero veto in multiplication. Gate considerations are evaluated separately and do not participate in compensation — they are binary pass/fail prerequisites.
+
+---
+
+## A6. Logging to prompt_current
+
+### A6.1 What Gets Logged
+
+Every mechanical decision logs a structured fact to `session_root._llm.prompt_current`:
+
+```
+FSM transition:
+    TAG_TEXT fact: "fsm_transition|session_lifecycle|active→suspended|idle_timeout|t=1234567"
+
+UAI scoring result:
+    TAG_TEXT fact: "uai_result|active_behaviors|winner=behavior_l3|score=58200|method=argmax"
+    TAG_TEXT fact: "uai_scores|behavior_l3=58200|behavior_l2=42100|behavior_l1=12400"
+
+Typed relation query result:
+    TAG_TEXT fact: "relation_result|enables(P1,X)|results=3|AR1,AR2,AR3"
+
+Prolog rule fire:
+    TAG_TEXT fact: "rule_fire|escalation_rule|kb=root.ops.incidents|success=true"
+```
+
+### A6.2 The Attention Counter
+
+The session tracks how many items the LLM has already seen in `prompt_current` versus how many exist:
+
+```
+session_root._llm.prompt_current
+    facts[0] = TAG_VALUE: items_seen_by_llm = 5      ← LLM updates after reading
+    facts[1] = TAG_VALUE: items_total = 8             ← system updates on each log
+    facts[2..N] = logged results
+```
+
+The LLM reads `items_total - items_seen_by_llm` to know how many new items it hasn't processed. After reading and incorporating them, it updates `items_seen_by_llm`. This prevents the LLM from re-reading old results or missing new ones.
+
+The counter mechanism is simple: two i32 facts. The system increments `items_total` on every log write. The LLM increments `items_seen_by_llm` after reading. The difference is the unread count. No ring buffer, no complex synchronization — the `prompt_current` KB is cleared every cycle anyway, so the counters reset to 0 at cycle boundaries.
+
+### A6.3 What the LLM Does With It
+
+The LLM reads the logged results during generation (Phase 5 of the inference loop). It sees:
+
+- Which FSM state the system is in.
+- Which behavior set was evaluated.
+- What the top scores were and which behavior won.
+- What relation queries were resolved at L3.
+- What rules fired.
+
+It can then:
+
+- **Accept the mechanical result.** Frame it as a user-facing response. Cost: ~20 tokens of framing prose. This is the common case.
+- **Override.** The LLM disagrees with the scoring — maybe the highest-scoring behavior is contextually inappropriate. It selects a different behavior or generates a fully custom response. Cost: L1 (50-500 tokens).
+- **Augment.** The mechanical result is correct but incomplete. The LLM adds context, caveats, or follow-up questions. Cost: ~30-50 tokens.
+- **Escalate.** The mechanical result indicates uncertainty (multiple behaviors scored within 5% of each other, or the winning score is below a threshold). The LLM asks for clarification or takes a conservative action. Cost: L2-L1.
+
+---
+
+## A7. The Full Decision Loop
+
+### A7.1 One Complete Cycle
+
+```
+1. User input arrives in prompt_input.
+
+2. Pre-resolution:
+   a. Classify query pattern (structural pattern detection).
+   b. If L3 candidate found → attempt typed relation query / Prolog rule.
+   c. Log result to prompt_current, increment items_total.
+
+3. FSM evaluation:
+   a. For each active FSM (system + session-local):
+      - Check transition rules against current context.
+      - If transition fires: update state, log to prompt_current.
+   b. Resolve current behavior set from current state.
+
+4. UAI scoring:
+   a. Build ScoringContext from session state.
+   b. Evaluate behavior set for current FSM state.
+   c. Select winner.
+   d. Log scores and winner to prompt_current.
+
+5. Execution decision:
+   a. If pre-resolution answered the query completely (L3):
+      → Log answer. LLM frames response.
+   b. If UAI winner has a direct action (Prolog query, builtin, KB assert):
+      → Execute action. Log result. LLM frames response.
+   c. If UAI winner is "defer_to_llm" or score is below confidence threshold:
+      → LLM runs full forward pass (L1).
+
+6. LLM generation:
+   a. LLM reads prompt_last for continuity.
+   b. LLM reads prompt_current for new items (items_total - items_seen_by_llm).
+   c. LLM generates response:
+      - Frames mechanical results as user-facing text.
+      - Overrides if judgment says mechanical result is wrong.
+      - Fills gaps where no mechanical coverage exists.
+   d. LLM writes to prompt_next for continuity.
+   e. LLM updates items_seen_by_llm.
+
+7. Post-generation:
+   a. Re-evaluate FSM transitions (generation may have changed context).
+   b. If transition fires: update state for next cycle.
+   c. System copies prompt_next → prompt_last.
+   d. prompt_next and prompt_current cleared (counters reset to 0).
+```
+
+### A7.2 Execution Levels in the Full Loop
+
+```
+L3 (zero tokens):
+    - Pre-resolution typed relation query succeeds.
+    - FSM transition fires from ground facts.
+    - UAI scoring evaluates and selects winner.
+    - Winner's action executes (Prolog query, KB assert).
+    - All results logged mechanically.
+    → LLM frames (~20 tokens). Total: ~20 tokens.
+
+L2 (~18 tokens):
+    - Pre-resolution finds candidates but can't disambiguate.
+    - UAI has multiple behaviors within 5% of each other.
+    - LLM selects from candidates, emits command.
+    - Prolog executes the selected command.
+    → LLM selects + frames (~38 tokens). Total: ~38 tokens.
+
+L1 (50-500 tokens):
+    - No FSM state covers this situation.
+    - No behavior set applies.
+    - No typed relations or rules match.
+    - LLM runs full forward pass from weights.
+    → Full generation. Total: 50-500 tokens.
+```
+
+---
+
+## A8. System-Level FSMs
+
+### A8.1 Defined FSMs
+
+The system ships with these FSMs as seed KBs:
+
+**Session Lifecycle FSM** (Moore, root.system.fsm.session_lifecycle):
+```
+States: created → active ↔ suspended → ejected ↔ active → killed
+Output: behavior set per state
+Transitions: Prolog rules checking session counters, timestamps, arena pressure
+```
+
+**HTTP Request Lifecycle FSM** (Mealy, root.system.fsm.http_lifecycle):
+```
+States: received → parsed → queued → processing → responded
+Error states: error_400 (malformed), error_503 (queue full), error_504 (timeout)
+Output: action per transition (push to queue, signal completion, send response)
+```
+
+**Inference Cycle FSM** (Moore, root.system.fsm.inference_cycle):
+```
+States: input → read → resolve_weights → forward → generate → postprocess → snapshot_check → (cycle)
+Output: which engine function to call per state
+Transition: sequential, always proceeds to next state
+```
+
+**Level Selection FSM** (DFA, root.system.fsm.level_selection):
+```
+States: query_received → classify_l3 → (execute_l3 | classify_l2) → (execute_l2 | execute_l1)
+Accepts: the query, classified into L3/L2/L1 terminal states
+Transitions: based on QueryClassification results
+```
+
+**KB Lifecycle FSM** (Moore, root.system.fsm.kb_lifecycle):
+```
+States: unloaded → loading → loaded ↔ training → loaded → frozen
+                                    ↔ saving → loaded
+Output: which operations are valid per state (e.g., training only valid in loaded state)
+```
+
+### A8.2 Session-Local FSMs
+
+Sessions can create their own FSMs in the ephemeral tree for domain-specific state tracking:
+
+```
+session_root._llm.fsm.conversation_phase
+    States: greeting → understanding → deliberation → response → follow_up
+    Transitions fire based on prompt_input content classification
+
+session_root._llm.fsm.task_tracker
+    States: idle → planning → executing → reviewing → complete
+    Transitions fire based on command results and user feedback
+
+session_root.domain.game.npc_42.combat_fsm
+    States: patrol → alert → engage → flee → dead
+    Transitions fire based on threat level, health, distance considerations
+```
+
+Session-local FSMs die with the session (negative IDs, ephemeral arena). They are snapshotted with the session and restored on reconnection.
+
+---
+
+## A9. Domain-Agnostic Prolog Rules for the Pipeline
+
+### A9.1 FSM Rules
+
+```prolog
+%% Get current behavior set from FSM state
+current_behavior_set(FsmKb, SetId) :-
+    current_state(FsmKb, State),
+    state_behavior_set(State, SetId).
+
+%% Check if a transition is available
+transition_available(FsmKb, NextState) :-
+    current_state(FsmKb, Current),
+    evolves_to(Current, NextState).
+
+%% Check if current state is terminal (no outgoing transitions)
+is_terminal_state(FsmKb) :-
+    current_state(FsmKb, State),
+    \+ evolves_to(State, _).
+```
+
+### A9.2 UAI Rules
+
+```prolog
+%% Evaluate and select best behavior for current state
+select_behavior(FsmKb, WinnerId, Score) :-
+    current_behavior_set(FsmKb, SetId),
+    evaluate_behavior_set(SetId, WinnerId, Score).
+
+%% Check if selected behavior meets confidence threshold
+behavior_confident(SetId, Threshold) :-
+    evaluate_behavior_set(SetId, _, Score),
+    Score >= Threshold.
+
+%% Fall back to LLM when scoring is ambiguous
+needs_llm_judgment(SetId) :-
+    evaluate_behavior_set(SetId, _, TopScore),
+    second_best_score(SetId, SecondScore),
+    Margin is TopScore - SecondScore,
+    Margin < 3277.    %% less than 5% of D
+```
+
+### A9.3 Structural Rules That Feed Considerations
+
+```prolog
+%% Relation coverage for a query type (feeds UAI consideration)
+relation_coverage(RelType, Count) :-
+    relation_type_count(RelType, Count).
+
+%% Rule match count for a functor (feeds UAI consideration)
+rule_coverage(Functor, Arity, Count) :-
+    functor_rule_count(Functor, Arity, Count).
+
+%% Confidence of best available data for a query
+best_confidence(KbId, Slot, Confidence) :-
+    fact_confidence(KbId, Slot, Confidence).
+
+%% Inheritance-expanded requirements (feeds gate considerations)
+all_requirements(Entity, Requirements) :-
+    findall(R, requires(Entity, R), DirectReqs),
+    findall(R, (specializes(Entity, Ancestor), requires(Ancestor, R)), InheritedReqs),
+    append(DirectReqs, InheritedReqs, Requirements).
+```
+
+---
+
+## A10. Cross-Domain Knowledge Composition
+
+### A10.1 How Documents Connect Through Typed Relations
+
+Every compacted document produces typed relations using canonical RelationType values. Documents connect through shared edges without explicit cross-references. The structural rules fire identically whether two edges are in the same document or different documents. The engine sees only VdrIds and RelationType — no document boundary.
+
+**Transitive chain across documents:**
+```prolog
+%% Movement: enables(force, acceleration)
+%% Physics: enables(acceleration, velocity_change)
+%% Derived: enables(force, velocity_change)   ← L3 BFS, zero tokens
+```
+
+**Inheritance across documents:**
+```prolog
+%% Data Structures: specializes(avl_tree, bst)
+%% Data Structures: validates(invariant, bst)
+%% Derived: validates(invariant, avl_tree)     ← inheritance rule, L3
+```
+
+**Inverse bridging across documents:**
+```prolog
+%% Philosophy: enables(syllogism, propositional_logic)
+%% Query: depends_on(propositional_logic, X)
+%% Derived: X = syllogism                      ← inverse dispatch, L3
+```
+
+### A10.2 Bridge Documents
+
+Certain documents serve as structural bridges between otherwise independent domains:
+
+- **English** (grammar + phrasing + vocabulary) bridges all domains to human communication.
+- **Connections** bridges all domains via a taxonomy of relatedness.
+- **Movement** bridges all domains via a taxonomy of change.
+- **Math Logic** bridges all domains via formalization of inference.
+- **Math Foundations** bridges all domains via mathematical structures.
+
+These five bridge documents plus domain-specific documents form a lattice where any two domains connect through at most two bridge hops. All connections are typed relations with known algebraic properties. All traversal is L3.
+
+### A10.3 The RelationType Algebra
+
+Three compile-time properties generate all structural inference:
+
+**Transitivity** (10 system types): `enables`, `requires`, `specializes`, `generalizes`, `part_of`, `contains`, `follows`, `precedes`, `depends_on`, `extends`. Chain composition via BFS.
+
+**Symmetry** (4 system types): `prevents`, `contradicts`, `equivalent_to`, `approximates`. Auto-query with swapped from/to.
+
+**Inverse** (10 pairs): `enables`↔`depends_on`, `specializes`↔`generalizes`, `part_of`↔`contains`, `follows`↔`precedes`, `validates`↔`verified_by`, `causes`↔`determined_by`. One index serves both directions.
+
+These properties compose. Transitive + inverse means the closure of `enables` automatically provides the closure of `depends_on`. Symmetric + transitive (`equivalent_to`) produces equivalence classes via BFS.
+
+Domain-registered relation types (slots 64-127) declare their properties at registration time and participate in the same algebraic inference.
+
+---
+
+## A11. Confidence Propagation Through the Pipeline
+
+### A11.1 Through Typed Relations
+
+Every TypedRelation carries Provenance with a confidence Q16 value. Derived facts from transitive closure, inverse dispatch, or inheritance get confidence = minimum of the input confidences in the chain.
+
+### A11.2 Through UAI Scoring
+
+UAI considerations can read confidence values as inputs. A consideration that reads confidence and applies a sigmoid curve produces high scores for high-confidence data and low scores for low-confidence data. This means the scoring system naturally prefers behaviors backed by confident data.
+
+### A11.3 Through FSM Transitions
+
+Transition rules can include confidence checks in their body:
+
+```prolog
+evolves_to(tentative, confirmed) :-
+    fact_confidence(TargetKb, TargetSlot, Confidence),
+    Confidence >= 52428.     %% published level (80/100)
+```
+
+This means the FSM won't transition to a "confirmed" state until the underlying data reaches a confidence threshold. The mechanical pipeline self-regulates based on data quality.
+
+---
+
+## A12. New Invariants
+
+```
+25. FSM current_state is always a valid atom in the machine's state set.
+26. FSM transitions fire only from the current state — not from arbitrary states.
+27. Every FSM state maps to exactly one behavior set (or none for terminal states).
+28. UAI scoring never produces NaN or infinity — Q16 arithmetic prevents this structurally.
+29. Dave Mark compensation factor (1-1/n) is computed in Q16 with exact remainder.
+30. Gate considerations do not participate in compensation — they are binary pass/fail.
+31. The items_seen_by_llm counter never exceeds items_total.
+32. prompt_current counters reset to 0 when the KB is cleared at cycle boundary.
+33. Session-local FSMs die with the session. Their states do not leak to global.
+34. Transition evaluation and UAI scoring both run on the pinned compute thread — never on HTTP threads.
+35. BehaviorSet evaluation is deterministic for argmax selection. Weighted random uses the session's deterministic PRNG seeded from session ID + turn count.
+```
+
+---
+
+## A13. New Seed KB
+
+```
+root.system.scoring             id: +15    (behavior sets for system decisions)
+root.system.fsm                 id: +16    (system-level FSM definitions)
+
+SEED.SCORING = .{ .v = 15 };
+SEED.FSM = .{ .v = 16 };
+SEED_KB_COUNT = 16;             // was 15
+```
+
+---
+
+## A14. Implementation File
+
+```
+vdr_scoring.zig    — ResponseCurve, Consideration, Behavior, BehaviorSet,
+                     ScoringContext, ScoringResult, compensation pipeline,
+                     curve evaluation, selection methods, scoring builtins
+vdr_fsm.zig        — FSM state management, transition evaluation,
+                     state→behavior_set resolution, FSM lifecycle,
+                     system FSM definitions
+```
+
+Both files import from `vdr_types.zig` for all struct definitions. The scoring builtins register in `vdr_builtin.zig` under category 22 (scoring). The FSM-specific builtins (current_state, evolves_to, transition_available) register under a new category 23 (fsm).
+
+Total estimated addition: ~3,000 lines across both files. Stage 4 (Ingestion + Relations) in the implementation plan expands to include these, or they form a new Stage 4b after relations are working.

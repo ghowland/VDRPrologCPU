@@ -1582,34 +1582,6 @@ pub const MatchResult = struct {
 };
 ```
 
-### Modified: RelationType — add instance_of
-
-The Knowledge Composition spec uses `instance_of` extensively for inheritance. This needs a system-defined slot. Adding at slot 20 (first available after the original 0-19):
-
-```zig
-pub const RelationType = enum(i16) {
-    // existing 0-19 ...
-    instance_of = 20,  // X is a specific instance of type Y
-    scoped_to = 21,    // X is visible/valid within scope Y
-    flows_to = 22,     // X sends data/control/energy to Y
-    transforms_to = 23, // X becomes Y through some process
-    derived_from = 24,  // X was produced from Y
-    composed_of = 25,   // X is built from Y (structural)
-    // ... remaining system slots 26-63 reserved
-    // domain slots 64-127 unchanged
-    unknown = -1,
-};
-```
-
-The `inverse()`, `isTransitive()`, and `isSymmetric()` methods need corresponding entries:
-
-- `instance_of`: not transitive (A instance_of B, B instance_of C does NOT mean A instance_of C), not symmetric, inverse = unknown
-- `scoped_to`: transitive (scoped to inner means scoped to outer), not symmetric, inverse = unknown
-- `flows_to`: transitive, not symmetric, inverse = unknown
-- `transforms_to`: transitive, not symmetric, inverse = unknown
-- `derived_from`: transitive, not symmetric, inverse = unknown
-- `composed_of`: not transitive (composition is not recursive by default — use `contains` for recursive), not symmetric, inverse = unknown
-
 ### Modified: PrologConfig — add inheritance depth limit
 
 ```zig
