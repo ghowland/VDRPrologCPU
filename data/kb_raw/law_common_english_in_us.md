@@ -261,3 +261,20 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|fo
 notation: _fk=foreign key; ~=approximate; BATNA=best alternative to negotiated agreement; ZOPA=zone of possible agreement; UCC=Uniform Commercial Code; CISG=United Nations Convention on Contracts for the International Sale of Goods; NDA=non-disclosure agreement; IP=intellectual property; M&A=mergers and acquisitions; LOC=letter of credit; GMP=guaranteed maximum price; SLA=service level agreement; CGL=commercial general liability (insurance); E&O=errors and omissions (professional liability insurance); COI=certificate of insurance; GAAP=generally accepted accounting principles; EBITDA=earnings before interest, taxes, depreciation, and amortization; AAA=American Arbitration Association; JAMS=formerly Judicial Arbitration and Mediation Services; ICC=International Chamber of Commerce; LCIA=London Court of International Arbitration; SIAC=Singapore International Arbitration Centre; FAA=Federal Arbitration Act (US); SCOTUS=Supreme Court of the United States; UCP 600=Uniform Customs and Practice for Documentary Credits; UETA=Uniform Electronic Transactions Act; E-SIGN=Electronic Signatures in Global and National Commerce Act; AIA=American Institute of Architects (contract forms); EJCDC=Engineers Joint Contract Documents Committee; FIDIC=International Federation of Consulting Engineers; FLSA=Fair Labor Standards Act; FMLA=Family and Medical Leave Act; ADA=Americans with Disabilities Act; NLRA=National Labor Relations Act; WARN=Worker Adjustment and Retraining Notification Act; ROFR=right of first refusal; PON=Program on Negotiation (Harvard); LVH=left ventricular hypertrophy (medical — wrong context; disregard); PUC=public utility commission; pu=per unit
 confidence: legal principles from Restatement (Second) of Contracts, UCC, leading treatises (Corbin, Williston, Farnsworth), and case law; negotiation theory from Fisher & Ury (Getting to Yes), Raiffa (Art and Science of Negotiation), Bazerman & Neale, Thompson (Mind and Heart of the Negotiator); cognitive biases from Kahneman & Tversky; all facts at reference_legal_negotiation confidence level; THIS IS NOT LEGAL ADVICE — jurisdiction-specific rules vary; consult qualified attorney for specific situations
 scope: negotiation theory and practice; contract law fundamentals (common law and UCC); commercial contract drafting and interpretation; dispute resolution mechanisms; risk allocation; financial terms; cognitive biases affecting negotiation; excludes: specific industry regulations beyond general principles, detailed tax implications, securities law, bankruptcy, antitrust, consumer protection, criminal law, and litigation procedure beyond overview; US common law focus with notes on international and civil law differences where relevant
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match

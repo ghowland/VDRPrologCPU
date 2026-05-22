@@ -495,3 +495,50 @@ DI20|distinguishes|CO18
 # plane: sagittal=forward/back; frontal=side-to-side; transverse=rotational
 # evidence_level: strong=multiple RCTs/meta-analyses; moderate=some RCTs or consistent observational; low=limited or conflicting evidence
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+requires|requires|exact match
+enables|enables|exact match
+mediated_by|implements|inverse; X mediated by Y = Y implements X
+triggers|causes|X triggers Y = X causes Y
+contains|contains|exact match
+mechanism|implements|X mechanism of Y = X implements Y
+governed_by|determined_by|X governed by Y = X determined_by Y
+stored_in|part_of|X stored in Y = X is part of Y
+instance_of|instance_of|exact match
+constrains|constrains|exact match
+inverse_of|complement_of|X inverse of Y = X complement of Y; symmetric
+governs|governs|exact match
+generalizes|generalizes|exact match
+models|models|exact match
+prevents|prevents|exact match; symmetric
+determines|determined_by|inverse; X determines Y = Y determined_by X
+measured_by|measured_by|exact match
+complements|complements|exact match; symmetric
+solved_by|solves|inverse; X solved by Y = Y solves X
+progresses_through|traverses|X progresses through Y = X traverses Y's stages
+integrates|synthesizes|X integrates Y = X synthesizes Y together
+part_of|part_of|exact match
+actuated_by|implements|inverse; X actuated by Y = Y implements X's movement
+supplies|supplies|exact match
+modulates|regulates|X modulates Y = X regulates Y
+regulates|regulates|exact match
+transitions_to|transforms_to|exact match in semantic
+complemented_by|complements|inverse; X complemented by Y = Y complements X; symmetric
+supplements|extends|X supplements Y = X extends Y
+powers|enables|X powers Y = X enables Y
+prime_mover_of|implements|X is prime mover of Y = X implements Y
+stabilizer_of|maintains|X stabilizer of Y = X maintains Y's stability
+develops|produces|X develops Y = X produces Y as adaptation
+autoregulates|regulates|X autoregulates Y = X regulates Y dynamically
+modifies|extends|X modifies Y = X extends Y with variation
+alternates|alternative_to|X alternates Y = X is alternative to Y cyclically
+sequences|organizes|X sequences Y = X organizes Y in order
+combines|synthesizes|X combines Y = X synthesizes Y simultaneously
+progresses|organizes|X progresses Y = X organizes Y in progression
+specializes|specializes|exact match
+reduces|degrades|X reduces Y = X degrades Y's severity
+enhances|amplifies|X enhances Y = X amplifies Y
+prevented_by|mitigated_by|X prevented by Y = X mitigated by Y
+measures|measured_by|inverse; X measures Y = Y measured by X
+distinguishes|distinguishes|exact match

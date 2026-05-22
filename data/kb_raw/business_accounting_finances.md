@@ -382,3 +382,57 @@ DI12|distinguishes|TA1,CO24
 # GAAP_references: ASC = Accounting Standards Codification (FASB); ASC 606 = revenue recognition; ASC 820 = fair value; ASC 842 = leases; ASC 350 = intangibles
 # tax_note: all tax rates, thresholds, and deadlines are US-specific and subject to annual change; consult current IRS publications and state authorities; this compaction provides structure, not current-year specifics
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+encompasses|contains|X encompasses Y = X contains Y
+implements|implements|exact match
+maintains|maintains|exact match
+contrasts|contrasts|exact match; symmetric
+requires|requires|exact match
+governs|governs|exact match
+organizes|organizes|exact match
+contains|contains|exact match
+recorded_in|part_of|X recorded in Y = X is part of Y
+validates|validates|exact match
+adjusts|transforms_to|X adjusts Y = Y transforms to corrected state
+resets|removes|X resets Y = X removes Y's accumulated balance
+component_of|part_of|X component of Y = X is part of Y
+increases|enables|X increases Y = X enables Y's growth
+decreases|degrades|X decreases Y = X degrades Y
+reduces|degrades|X reduces Y = X degrades Y
+maintained_by|maintains|inverse; X maintained by Y = Y maintains X
+visualizes|models|X visualizes Y = X models Y visually
+formats|implements|X formats Y = X implements Y's structure
+connects|connects_to|exact match; symmetric
+reports|contains|X reports Y = X contains Y as disclosed data
+produces|produces|exact match
+flows_to|flows_to|exact match
+updates|transforms_to|X updates Y = Y transforms to new state
+reconciles|validates|X reconciles Y = X validates Y's accuracy
+debits|input_to|X debits Y = X is input to Y as debit
+credits|input_to|X credits Y = X is input to Y as credit
+instance_of|instance_of|exact match
+derived_from|derived_from|exact match
+calculated_from|derived_from|X calculated from Y = X derived from Y
+collected_via|flows_to|X collected via Y = X flows to government through Y
+prepays|precedes|X prepays Y = X precedes Y's due date
+withheld_from|part_of|X withheld from Y = X is part of Y taken out
+matches|equivalent_to|X matches Y = X equivalent to Y in amount
+equals|equivalent_to|X equals Y = X equivalent to Y
+adds_to|extends|X adds to Y = X extends Y's total
+documents|implements|X documents Y = X implements Y's record
+summarizes|models|X summarizes Y = X models Y in compressed form
+monitors|inspects|X monitors Y = X inspects Y ongoing
+controls|controls|exact match
+provides|enables|X provides Y = X enables Y
+forecasts|indicates|X forecasts Y = X indicates Y's future
+integrates|synthesizes|X integrates Y = X synthesizes Y together
+drives|causes|X drives Y = X causes Y
+separate_from|contrasts|X separate from Y = X contrasts with Y
+compares|distinguishes|X compares Y = X distinguishes between Y
+prevents|prevents|exact match; symmetric
+detects|indicates|X detects Y = X indicates Y's presence
+ensures|validates|X ensures Y = X validates Y's completeness
+enables|enables|exact match
+prevented_by|mitigated_by|X prevented by Y = X mitigated by Y
+distinguishes|distinguishes|exact match

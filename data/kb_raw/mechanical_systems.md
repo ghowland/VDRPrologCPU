@@ -536,3 +536,21 @@ notation: _fk=foreign key; ~=approximate; ISO VG=viscosity grade; dN=bore diamet
 units: bar (1 bar = 100,000 Pa); MPa (1 MPa = 10 bar); kW (kilowatt); N·m (newton-meter); kN (kilonewton); m³/h (cubic meters per hour); L/min (liters per minute); rpm (revolutions per minute); mm (millimeters); μm (micrometers); m/s (meters per second); °C (degrees Celsius); W/m·K (watts per meter-kelvin); g/cm³ (grams per cubic centimeter); GPa (gigapascal); cP (centipoise); cSt (centistokes); Sv (sverdrup, for flow); mA (milliampere); mV (millivolt)
 confidence: material properties are typical/nominal values; ranges given where significant variation exists; manufacturer-specific data may differ; all facts at reference_engineering confidence level
 scope: mechanical systems, fluid power, thermal systems, instrumentation, and structural components for industrial, mobile, and infrastructure applications; excludes electronic circuit design, software architecture, and building architectural design; covers component-level through system-level
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+determines|determined_by|reverse query direction; swap from/to

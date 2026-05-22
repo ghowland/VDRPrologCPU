@@ -447,3 +447,18 @@ notation: _fk=foreign key; ~=approximate value; CN=cranial nerve; C/T/L/S=cervic
 units: g=grams; cm=centimeters; mm=millimeters; m²=square meters; mL=milliliters; L=liters; μm=micrometers; μL=microliters; bpm=beats per minute; m/s=meters per second
 confidence: all anatomical values are standard adult reference ranges; individual variation exists; all facts at reference_anatomy confidence level
 scope: standard adult human gross and microscopic anatomy; excludes developmental/embryological anatomy except where noted; excludes detailed neuroanatomical tract mapping; clinical significance included for surgical/diagnostic relevance
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match

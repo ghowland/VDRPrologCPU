@@ -543,3 +543,36 @@ DI20|distinguishes|TH15
 # dates: BC dates negative in computational systems; c. = circa (approximate); trad. = traditional dating (may be legendary)
 # geography: locations at time of primary philosophical activity
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+extends|extends|exact match
+requires|requires|exact match
+contains|contains|exact match
+part_of|part_of|exact match
+precedes|precedes|exact match
+distinguishes|distinguishes|exact match
+critiques|critiques|exact match
+opposes|opposes|exact match
+responds_to|responds_to|exact match
+synthesizes|synthesizes|exact match
+parallel_to|parallel_to|exact match
+contrasts|contrasts|exact match
+complements|complements|exact match
+founded|founded|exact match
+influences|influences|exact match
+transmits|transmits|exact match
+derived_from|derived_from|exact match
+derives_from|derived_from|"derives_from" is variant spelling; normalize to "derived_from"
+complemented_by|complements|reverse query direction; "X complemented_by Y" → "Y complements X"
+defined_by|determined_by|"X defined_by Y" → "X determined_by Y"; thinker determines concept
+central_to|part_of|"X central_to Y" → "X part_of Y"; loose fit
+related_to|connects_to|"X related_to Y" → "X connects_to Y"; generic bidirectional link
+goal_of|purpose_of|"X goal_of Y" → "X purpose_of Y"
+debated_by|contrasts|loose fit; multiple thinkers debate a concept; no clean canon match
+contemporary_with|parallel_to|"X contemporary_with Y" ≈ "X parallel_to Y"; temporal co-occurrence
+generates|produces|"X generates Y" → "X produces Y"
+introduces|produces|"X introduces Y" → "X produces Y"; text producing a concept
+argues_for|enables|loose fit; "text argues_for claim" ≈ "text enables claim"
+examines|studies|"X examines Y" → "X studies Y"
+asserts|enables|loose fit; "claim asserts concept" ≈ "claim enables concept"
+defends|protects|"X defends Y" → "X protects Y"

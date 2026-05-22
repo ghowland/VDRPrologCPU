@@ -421,3 +421,14 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|fo
 notation: _fk=foreign key; ~=approximate; °C=degrees Celsius; m=meters; km=kilometers; g=grams; kg=kilograms; L=liters; kW=kilowatts; kcal=kilocalories; FP=fill power (down); WPB=waterproof-breathable; MVTR=moisture vapor transmission rate; DWR=durable water repellent; UPF=ultraviolet protection factor; GTX=Gore-Tex; DEET=N,N-diethyl-meta-toluamide; NOAA=National Oceanic and Atmospheric Administration; NPS=National Park Service; USFS=US Forest Service; BLM=Bureau of Land Management; LNT=Leave No Trace; PLB=personal locator beacon; GPS=global positioning system; AMS=acute mountain sickness; HACE=high-altitude cerebral edema; HAPE=high-altitude pulmonary edema; GI=gastrointestinal; SAM=structural aluminum malleable (splint); ACE=brand name elastic bandage; RH=relative humidity; P/E=protein/energy; R-value=thermal resistance of sleeping pad (higher=warmer); HYOH=hike your own hike
 confidence: weights and specifications are typical ranges from major manufacturers (2023–2024); medical protocols are Wilderness Medical Society guidelines; individual variation applies to all physiological and performance data; all facts at reference_outdoor confidence level
 scope: backcountry camping, hiking, and wilderness travel in temperate, alpine, desert, and cold environments; covers gear, skills, hazards, first aid, navigation, and ethics; excludes: technical rock climbing, mountaineering above 5,000 m, whitewater kayaking, ocean sailing, hunting, fishing (separate domains); focused on self-powered human travel with overnight capability
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match; symmetric
+specializes|specializes|exact match
+contains|contains|exact match
+precedes|precedes|exact match
+extends|extends|exact match
+equivalent_to|equivalent_to|exact match; symmetric
+determined_by|determined_by|exact match

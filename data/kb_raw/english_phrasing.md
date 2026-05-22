@@ -433,3 +433,17 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|fo
 notation: _fk=foreign key; SUBJ=subject; V=verb; OBJ=direct object; OBJ1/OBJ2=first/second object; OBLIQUE=oblique complement (typically PP); PP=prepositional phrase; NP=noun phrase; AP/AdjP=adjective phrase; VP=verb phrase; ADV/ADVL=adverb/adverbial; DET=determiner; POSS=possessive; XP=any phrase; ADJ=adjective; N=noun; *=ungrammatical; ?=marginal; ↗=rising intonation; ↘=falling intonation; ↑=high pitch; ↓=step down; BrE=British English; V+N=verb-noun collocation; ADJ+N=adjective-noun collocation; V+PP=verb-preposition collocation; ADV+ADJ=adverb-adjective collocation; FSM=finite state machine; IS=information structure (context-dependent: disambiguate from initials by table context)
 confidence: all patterns described are well-attested in English linguistics literature (Goldberg 1995, 2006; Fillmore et al. 1988; Halliday 1994; Lakoff & Johnson 1980; Levinson 1983; Biber et al. 1999; Sinclair 1991); individual examples may vary by dialect and register; all facts at reference_linguistics confidence level
 scope: Modern Standard English phrasing patterns; covers construction grammar, argument structure, information structure, pragmatics, discourse, register, collocation, metaphor, and prosody; complements the English Grammar compact (which covers syntax and morphology) by adding the constraint layer that determines which grammatically valid sentences are actually produced in context; excludes historical development of constructions, child acquisition sequence, and computational/formal modeling
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match

@@ -446,3 +446,20 @@ notation: AU=astronomical unit (149,597,870.7 km); Gt=gigatonnes; Gyr=billion ye
 units: distances in km unless AU specified; areas in km²; masses in kg; temperatures in °C unless K specified; rainfall in mm/yr; GDP in nominal USD 2023; population estimates 2024 mid-year
 confidence: country data from World Bank/IMF/CIA World Factbook 2023–2024; solar system data from NASA/JPL/IAU; Earth interior from PREM (Preliminary Reference Earth Model); climate data from IPCC AR6 and CRU/NOAA; tectonic velocities from GPS and MORVEL; all facts at reference_geography confidence level
 scope: global physical and political geography; Earth systems (geosphere, hydrosphere, atmosphere, biosphere); local cosmic context (solar system, orbital mechanics, Earth-Sun-Moon interactions); excludes detailed sub-national geography, urban systems, and exoplanetary science; country selection = top 30 GDP + regional representation
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match

@@ -378,3 +378,24 @@ DI14|distinguishes|CO28,CO29
 # rel_types: foundation_for|extends|specializes|generalizes|implements|requires|constrains|validates|part_of|derived_from|contains|equivalent_to|contradicts|distinguishes|complement_of|constructed_from|instance_of|measured_by|studies
 # notation: fk references use raw ID; comma-separated targets expand to individual rules; — in parent_branch means root-level branch
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+extends|extends|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+requires|requires|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+derived_from|derived_from|exact match
+equivalent_to|equivalent_to|exact match
+contradicts|contradicts|exact match
+instance_of|instance_of|exact match
+implements|implements|exact match
+distinguishes|distinguishes|exact match
+constrains|constrains|exact match
+validates|validates|exact match
+foundation_for|foundation_for|exact match
+complement_of|complement_of|exact match
+constructed_from|constructed_from|exact match
+measured_by|measured_by|no canon match — flagged in prior docs (algorithms, data structures)
+studies|studies|exact match

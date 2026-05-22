@@ -483,3 +483,43 @@ DI14|distinguishes|CO1,LO1
 # rel_types: has_property|participates_in|implements|instance_of|specializes|modulates|requires|constrained_by|contrasts|characterizes|enables|compensates_for|terminates|extends|governs|opposes|destabilizes|stabilizes|mimics|combines|emerges_from|traverses|establishes|caches|buffers|encodes|validates|mediates|constrains|negates|weakens|causes|prevents|protects|created_by|determines|distinguishes
 # connection_properties: direction (directed/undirected), strength (weak/strong), persistence (transient/persistent), latency (zero/finite/variable), capacity (finite/infinite), impedance (low/high)
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+has_property|composed_of|X has property Y = X composed of properties Y
+participates_in|part_of|X participates in Y = X is part of Y
+implements|implements|exact match
+instance_of|instance_of|exact match
+specializes|specializes|exact match
+modulates|regulates|X modulates Y = X regulates Y
+requires|requires|exact match
+constrained_by|constrains|inverse; X constrained by Y = Y constrains X
+contrasts|contrasts|exact match; symmetric
+characterizes|indicates|X characterizes Y = X indicates Y's nature
+enables|enables|exact match
+compensates_for|mitigated_by|inverse; X compensates for Y = Y mitigated_by X
+terminates|removes|X terminates Y = X removes Y from existence
+extends|extends|exact match
+governs|governs|exact match
+opposes|opposes|exact match; symmetric
+destabilizes|disrupts|X destabilizes Y = X disrupts Y
+stabilizes|maintains|X stabilizes Y = X maintains Y's equilibrium
+mimics|models|X mimics Y = X models Y's appearance
+combines|synthesizes|X combines Y = X synthesizes Y together
+emerges_from|result_of|X emerges from Y = X is result of Y
+traverses|traverses|exact match
+establishes|produces|X establishes Y = X produces Y
+caches|maintains|X caches Y = X maintains a copy of Y
+buffers|maintains|X buffers Y = X maintains Y temporarily
+encodes|implements|X encodes Y = X implements Y's representation
+validates|validates|exact match
+mediates|mediates|exact match
+constrains|constrains|exact match
+negates|prevents|X negates Y = X prevents Y
+weakens|degrades|X weakens Y = X degrades Y
+causes|causes|exact match
+prevents|prevents|exact match; symmetric
+protects|protects|exact match
+creates|produces|X creates Y = X produces Y
+determines|determined_by|inverse; X determines Y = Y determined_by X
+distinguishes|distinguishes|exact match
+caused_by|causes|inverse; X caused by Y = Y causes X

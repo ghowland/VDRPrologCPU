@@ -345,3 +345,20 @@ notation: _fk=foreign key; ~=approximate; °C=degrees Celsius; cm=centimeters; m
 units: weights in g or kg; distances in cm or m; areas in m²; volumes in L; temperatures in °C; time in days, weeks, or months; concentrations in % (w/w); rates in kg/m²/season
 confidence: crop data from university extension services (UC Davis, Cornell, Purdue, Oregon State); planting calendars are generalized (local microclimate varies); yield estimates are ranges for home garden conditions (not commercial); all facts at reference_gardening confidence level
 scope: home-scale food gardening; organic and alternative growing systems; temperate, subtropical, tropical, arid, and maritime climates; covers soil through harvest through preservation; excludes commercial agriculture, ornamental gardening, lawn care, and forestry; focused on edible plant production for household food security and quality
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match

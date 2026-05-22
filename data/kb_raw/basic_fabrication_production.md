@@ -429,3 +429,26 @@ PD15|enables|PR1,PR2,PR3
 # critical_parameters: the variables that most determine success or failure; controlling these separates competent work from failure
 # SAP value: saponification value = mg KOH needed to saponify 1g of fat; NaOH SAP = KOH SAP / 1.403; lookup per oil type
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+input_to|input_to|exact match
+produces|produces|exact match
+precedes|precedes|exact match
+required_by|requires|inverse; X required by Y = Y requires X
+used_in|implements|inverse; X used in Y = X implements Y's process
+transformed_by|transforms_to|inverse; X transformed by Y = X transforms to new form via Y
+specializes|specializes|exact match
+finalizes|follows|X finalizes Y = X follows Y as completion step
+enables|enables|exact match
+constrains|constrains|exact match
+caused_by|causes|inverse; X caused by Y = Y causes X
+reverses|reverses|exact match
+determined_by|determined_by|exact match
+byproduct_of|result_of|X byproduct of Y = X is result of Y
+basis_of|foundation_for|X is basis of Y = X is foundation for Y
+transforms|transforms_to|X transforms Y = Y transforms to new state
+requires|requires|exact match
+alternative_to|alternative_to|exact match; symmetric
+hazard_of|hazard_of|exact match
+failure_of|anti_pattern_of|X failure of Y = X is anti-pattern of Y
+distinguishes|distinguishes|exact match

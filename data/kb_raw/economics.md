@@ -526,3 +526,73 @@ DI17|distinguishes|PI1,PI7
 # claim_types: axiom=foundational unargued commitment; derivation=follows from prior claims; observation=empirical finding; reframe=reconceptualization of existing idea; prescription=recommended action
 # market_structure: firms=number of firms; product=homogeneous or differentiated; entry_barriers=none/low/high/very high; price_power=none to price-setter
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+generates|produces|exact semantic match; X generates Y = X produces Y
+requires|requires|exact match
+assumes|requires|X assumes Y = X requires Y as precondition
+drives|causes|X drives Y = X causes Y
+interacts_with|connects_to|symmetric interaction; closest symmetric relation
+signals|indicates|X signals Y = X indicates Y
+implements|implements|exact match
+measures|measured_by|inverse direction; "IC1 measures CO44" → CO44 measured_by IC1; stored as written, inverse() resolves
+governed_by|determined_by|X governed by Y = X determined_by Y
+explains|explains|exact match
+constrains|constrains|exact match
+represents|models|X represents Y = X models Y
+derives_from|derived_from|exact match
+determines|determined_by|inverse direction; "CO21 determines CO7" → CO7 determined_by CO21
+characterizes|composed_of|inverse; X characterizes Y = Y composed_of properties X describes
+derived_from|derived_from|exact match
+caused_by|causes|inverse direction; "CO16 caused by CO29" → CO29 causes CO16
+violates|prevents|X violates Y = X prevents Y from holding
+specializes|specializes|exact match
+enables|enables|exact match
+contrasts|contrasts|exact match; symmetric
+reduces|degrades|X reduces Y = X degrades Y
+affects|influences|exact match in intent
+balances|regulates|X balances Y = X regulates Y
+governs|governs|exact match
+amplifies|amplifies|exact match
+offsets|mitigated_by|inverse; "CO52 offsets PI7" → PI7 mitigated_by CO52
+relates|connects_to|X relates Y = bidirectional link
+predicted_by|determined_by|X predicted by model Y = X determined_by Y
+modifies|extends|X modifies Y = X extends Y with changes
+part_of|part_of|exact match
+formalizes|models|X formalizes Y = X models Y precisely
+transfers|produces|X transfers Y = X produces Y in new location
+threatens|threatens|exact match
+disrupts|disrupts|exact match
+augments|extends|X augments Y = X extends Y's capacity
+analyzes|models|X analyzes Y = X models Y for understanding
+defines|implements|inverse; "TK1 defined CO26" → CO26 implemented/created by TK1; closest: implements
+precedes|precedes|exact match
+extends|extends|exact match
+critiques|critiques|exact match
+responds_to|responds_to|exact match
+synthesizes|synthesizes|exact match
+integrates|synthesizes|X integrates Y = X synthesizes multiple Y
+founded|founded|exact match
+defined|founded|"TK1 defined CO26" = TK1 founded/originated CO26
+models|models|exact match
+achieves|implements|X achieves Y = X implements Y successfully
+addresses|solves|X addresses Y = X solves problem Y
+corrects|mitigated_by|inverse; "PI8 corrects CO29" → CO29 mitigated_by PI8
+causes|causes|exact match
+counteracts|mitigated_by|inverse; "PI11 counteracts CO29" → CO29 mitigated_by PI11
+prevents|prevents|exact match
+anchors|regulates|X anchors Y = X regulates Y to stability
+adjusts|transforms_to|X adjusts Y = Y transforms_to corrected form
+normalizes|transforms_to|X normalizes Y = Y transforms_to normalized form
+leads|precedes|X leads Y = X precedes Y temporally
+refines|specializes|X refines Y = X specializes Y with more precision
+predicts|indicates|X predicts Y = X indicates Y
+stabilizes|regulates|X stabilizes Y = X regulates Y
+promotes|enables|X promotes Y = X enables Y
+enforces|validates|X enforces Y = X validates Y compliance
+coordinates|orchestrates|X coordinates Y = X orchestrates Y
+disputes|opposes|X disputes Y = X opposes Y
+reconciles|synthesizes|X reconciles Y = X synthesizes opposing Y
+approaches|enables|X approaches Y = X enables movement toward Y
+distinguishes|distinguishes|exact match
+illustrates|explains|X illustrates Y = X explains Y via example

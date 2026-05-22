@@ -364,3 +364,37 @@ DI8|distinguishes|CO21,HE6
 # THI: Temperature-Humidity Index; cattle heat stress threshold ~THI 68; THI = (1.8×T+32) - (0.55-0.0055×RH) × ((1.8×T+32)-58)
 # withdrawal period: time after treatment before milk/eggs/meat safe for consumption; varies by drug and product; check label; not covered in detail as this compaction excludes harvesting
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+characterizes|indicates|X characterizes Y = X indicates Y's type
+requires|requires|exact match
+enables|enables|exact match
+produced_by|result_of|X produced by Y = X is result of Y
+part_of|part_of|exact match
+assessed_by|measured_by|X assessed by Y = X measured by Y
+governs|governs|exact match
+component_of|part_of|X component of Y = X is part of Y
+measures|measured_by|inverse; X measures Y = Y measured by X
+required_by|requires|inverse; X required by Y = Y requires X
+supplements|extends|X supplements Y = X extends Y
+protects|protects|exact match
+species_specific|scoped_to|X species-specific to Y = X scoped to Y
+follows|follows|exact match
+precedes|precedes|exact match
+transitions|transforms_to|X transitions Y = Y transforms to next stage
+managed_by|regulates|inverse; X managed by Y = Y regulates X
+prevents|prevents|exact match; symmetric
+framework_for|foundation_for|X is framework for Y = X is foundation for Y
+affects|influences|exact match in intent
+defines|determined_by|inverse; X defines Y = Y determined by X
+caused_by|causes|inverse; X caused by Y = Y causes X
+threatens|threatens|exact match
+improves|enables|X improves Y = X enables Y's quality
+reduces|degrades|X reduces Y = X degrades Y
+indicates|indicates|exact match
+housed_in|scoped_to|X housed in Y = X scoped to Y
+prevented_by|mitigated_by|X prevented by Y = X mitigated by Y
+complementary_grazing|complements|X complementary grazing with Y = X complements Y; symmetric
+increases|amplifies|X increases Y = X amplifies Y
+decreases|degrades|X decreases Y = X degrades Y
+distinguishes|distinguishes|exact match

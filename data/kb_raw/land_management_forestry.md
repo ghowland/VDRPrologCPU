@@ -270,3 +270,21 @@ notation: _fk=foreign key; ~=approximate; ha=hectare (10,000 m²); m³=cubic met
 units: dimensions in m or cm; areas in ha or m²; volumes in m³ or MBF; density in stems/ha or m²/ha (basal area); growth rates in m³/ha/yr; temperatures in °C; precipitation in mm/yr; costs in $/m³ or $/ha; carbon in tonnes CO₂e or Gt C; fire intensity in kW/m; slope in % (rise/run × 100); soil particle sizes in mm
 confidence: silvicultural prescriptions from SAF (Society of American Foresters) and USFS research publications; fire ecology from NWCG and Joint Fire Science Program; pest data from USFS Forest Health Protection; economic values are 2023 approximate ranges (highly variable by region and market); hydrology from USFS General Technical Reports and peer-reviewed watershed studies; all facts at reference_forestry confidence level
 scope: forest management from stand to landscape scale; covers silviculture, timber harvest, forest ecology, watershed, wildlife, fire, pests, conservation, agroforestry, urban forestry, and economics; primarily North American practice with global principles; excludes: detailed wood processing (sawmill, pulp mill operations), paper manufacturing, detailed wildlife biology (species-specific management plans), detailed fire suppression tactics (ICS operations), and tropical plantation forestry in detail (covered in overview only)
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match
+determines|determined_by|reverse query direction; swap from/to; same gap as physics and mechanical

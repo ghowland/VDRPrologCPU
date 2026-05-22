@@ -460,3 +460,23 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|fo
 notation: ~=approximate date; fk=foreign key reference; range X1-X17 expands to individual IDs; comma-separated to-field expands to multiple rules; BCE=Before Common Era; CE=Common Era
 confidence: demographic values are estimates with uncertainty increasing with antiquity; transition dates are approximate where prefixed with ~; all facts asserted at reference_history confidence level
 scope: global human history ~3,300,000 BCE to ~2025 CE; mechanical state-transitions only; no political interpretation; no normative framing
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+causes|causes|exact match
+composed_of|composed_of|exact match
+transforms_to|transforms_to|exact match
+depends_on|depends_on|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+validates|validates|exact match

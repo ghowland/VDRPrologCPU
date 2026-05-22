@@ -475,3 +475,26 @@ DI15|distinguishes|TY58,DS1
 # notation: fk references use raw ID; comma-separated targets expand to individual Prolog rules
 # anti_patterns: merged into concepts table with category=anti_pattern; linked via anti_pattern_of relationships
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+characterizes|characterizes|no canon match — see below
+part_of|part_of|exact match
+specializes|specializes|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+requires|requires|exact match
+enables|enables|exact match
+implements|implements|exact match
+implemented_by|implements|inverse query direction
+prevents|prevents|exact match
+anti_pattern_of|anti_pattern_of|exact match
+manages|manages|exact match
+isolates|isolates|exact match
+orchestrates|orchestrates|exact match
+generates|generates|exact match
+inspects|inspects|exact match
+validates|validates|exact match
+distinguishes|distinguishes|exact match
+generalizes|generalizes|exact match
+

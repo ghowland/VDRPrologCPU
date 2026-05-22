@@ -367,3 +367,47 @@ DI10|distinguishes|CO2
 # temperature: relative (not absolute); any color can be warmer or cooler than its neighbor; warm = toward orange; cool = toward blue; context-dependent
 # edge_types: hard (sharp, abrupt transition), soft (gradual transition), lost (edges disappear into surrounding area), found (edges re-emerge after being lost)
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+creates|produces|X creates Y = X produces Y
+enables|enables|exact match
+simplifies|simplifies|exact match
+contains|contains|exact match
+created_by|result_of|X created by Y = X is result of Y
+complements|complements|exact match; symmetric
+captures|implements|X captures Y = X implements Y's essence
+defines|produces|X defines Y = X produces Y's identity
+requires|requires|exact match
+participates_in|part_of|X participates in Y = X is part of Y
+contrasts|contrasts|exact match; symmetric
+property_of|part_of|X is property of Y = X is part of Y
+sets|produces|X sets Y = X produces Y's state
+constrains|constrains|exact match
+modifies|extends|X modifies Y = X extends Y with alteration
+governs|governs|exact match
+precedes|precedes|exact match
+develops|produces|X develops Y = X produces Y through practice
+enriches|amplifies|X enriches Y = X amplifies Y's quality
+ensures|validates|X ensures Y = X validates Y's accuracy
+structures|organizes|X structures Y = X organizes Y
+plans|precedes|X plans Y = X precedes Y as preparation
+builds|produces|X builds Y = X produces Y incrementally
+supports|enables|X supports Y = X enables Y
+implements|implements|exact match
+animates|enables|X animates Y = X enables Y's liveliness
+refines|extends|X refines Y = X extends Y's precision
+challenges|opposes|X challenges Y = X opposes Y's ease
+specializes|specializes|exact match
+extends|extends|exact match
+organizes|organizes|exact match
+frames|frames|exact match
+controls|controls|exact match
+relates|connects_to|X relates Y = X connects to Y
+used_in|implements|inverse; X used in Y = X implements Y
+isolates|separates|X isolates Y = X separates Y for focus
+enhances|amplifies|X enhances Y = X amplifies Y
+establishes|produces|X establishes Y = X produces Y's foundation
+integrates|synthesizes|X integrates Y = X synthesizes Y together
+corrects|mitigated_by|inverse; X corrects Y = Y mitigated by X
+caused_by|causes|inverse; X caused by Y = Y causes X
+distinguishes|distinguishes|exact match

@@ -452,3 +452,25 @@ rel_types: enables|requires|prevents|extends|validates|verified_by|contradicts|c
 notation: ~=approximate value; ℏ=h-bar (reduced Planck); γ=Lorentz factor; ∮=closed surface/line integral; ∇²=Laplacian; ∂=partial derivative; M☉=solar mass; eV=electron volt; GeV=gigaelectron volt; MeV=megaelectron volt; _fk=foreign key; e=elementary charge unit (context distinguishes from Euler's number)
 confidence: constant values from CODATA 2018 / PDG 2023; particle masses from PDG 2023; cosmological parameters from Planck 2018 + SH0ES; all facts at reference_physics confidence level
 scope: physics from classical mechanics through Standard Model and general relativity; excludes speculative beyond-SM theories (string theory, loop quantum gravity, SUSY) except where noted as open problems; covers established experimental results through 2023
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+extends|extends|exact match
+validates|validates|exact match
+contradicts|contradicts|exact match
+causes|causes|exact match
+determined_by|determined_by|exact match
+depends_on|depends_on|exact match
+equivalent_to|equivalent_to|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match
+transforms_to|transforms_to|exact match
+determines|determined_by|reverse query direction; "determines" not in canon, use determined_by with swapped from/to

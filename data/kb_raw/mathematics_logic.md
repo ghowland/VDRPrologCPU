@@ -491,3 +491,20 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|fo
 notation: ¬=negation (NOT); ∧=conjunction (AND); ∨=disjunction (OR); →=material conditional (IF...THEN); ↔=biconditional (IFF); ⊕=exclusive or (XOR); ↑=NAND (Sheffer stroke); ↓=NOR (Peirce arrow); ∀=universal quantifier (for all); ∃=existential quantifier (there exists); ∃!=unique existential; □=necessity (modal); ◇=possibility (modal); ⊤=tautology/truth/top; ⊥=contradiction/falsity/bottom; ⊨=semantic entailment (models/satisfies); ⊢=syntactic derivability (proves); ≡=logical equivalence (metalogical); ≅=isomorphism; ∈=set membership; ⊆=subset; ⊂=proper subset; ∅=empty set; ℘=power set; ∪=union; ∩=intersection; \=set difference; △=symmetric difference; ×=Cartesian product; ∘=function composition; ℕ=natural numbers; ℤ=integers; ℚ=rationals; ℝ=reals; ω=first infinite ordinal (=ℕ as set); κ,λ=cardinal numbers; Γ,Δ,Σ,Π=sets of formulas/sequent sides; φ,ψ,χ,σ,θ=formulas; L=formal language; M,N=structures/models; D=domain/universe of structure; I=interpretation function; R=relation; f,g,h=functions; s=variable assignment; ⌈φ⌉=Gödel number of φ; T=formal theory; Con(T)="T is consistent" (formalized); PA=Peano arithmetic; ZFC=Zermelo-Fraenkel with Choice; ZF=Zermelo-Fraenkel without Choice; CH=continuum hypothesis; AC=axiom of choice; LEM=law of excluded middle; DNE=double negation elimination; BHK=Brouwer-Heyting-Kolmogorov (interpretation); CCC=cartesian closed category; HoTT=homotopy type theory; MLTT=Martin-Löf type theory; DLO=dense linear order without endpoints; RCF=real closed field; SAT=Boolean satisfiability; CNF=conjunctive normal form; DNF=disjunctive normal form; NNF=negation normal form; LK=sequent calculus (classical); LJ=sequent calculus (intuitionistic); MP=modus ponens; r.e.=recursively enumerable; PR=primitive recursive; NP=nondeterministic polynomial time; coNP=complement of NP; NEXPTIME=nondeterministic exponential time; LTL=linear temporal logic; CTL=computation tree logic; S1S/S2S/WS1S=monadic second-order theories of successor(s); Σₙ,Πₙ=arithmetic/analytical hierarchy levels; DPLL=Davis-Putnam-Logemann-Loveland (SAT algorithm); CDCL=conflict-driven clause learning; BDD=binary decision diagram; CAD=cylindrical algebraic decomposition
 confidence: all definitions, theorems, and results from standard references (Enderton 2001, Mendelson 2015, Shoenfield 1967, Marker 2002, Soare 2016, Blackburn et al. 2001, Troelstra & van Dalen 1988, Awodey 2010, Kunen 2011); all facts at reference_mathematical_logic confidence level
 scope: mathematical logic covering propositional and predicate logic, set theory, proof theory, model theory, computability theory, modal logic, intuitionistic logic, type theory, and category-theoretic logic; includes syntax, semantics, metatheory, decidability, and algebraic semantics; excludes: detailed recursion theory beyond basics (degrees, priority arguments), descriptive set theory, large cardinal theory beyond mention, detailed proof complexity, and applications to specific mathematical theories (algebra, analysis) beyond illustrative examples
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match

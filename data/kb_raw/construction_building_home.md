@@ -323,3 +323,16 @@ notation: _fk=foreign key; ~=approximate; OC=on center; CI=continuous insulation
 units: dimensions in mm unless noted; pressures in kPa; temperatures in °C; R-values in imperial (ft²·°F·h/BTU) per industry convention; loads in kPa; wind speeds in km/h; wire in AWG; pipe in nominal inches; concrete in MPa (compressive strength)
 confidence: specifications from IRC 2021, NEC 2023, IECC 2021, ASHRAE 62.2-2022, and manufacturer technical data; regional variations exist (local code amendments, climate-specific practices); all facts at reference_construction confidence level
 scope: residential and small-scale construction (one- and two-family dwellings, accessory structures, small commercial); covers foundation through finish with emphasis on structural, envelope, mechanical, plumbing, and electrical systems; excludes: commercial/industrial construction, high-rise, heavy civil engineering, specialized systems (elevators, fire suppression sprinklers beyond residential), and detailed architectural design; North American practice focus (IRC/NEC/IECC) with principles applicable globally
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match; symmetric
+specializes|specializes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+determined_by|determined_by|exact match
+extends|extends|exact match
+validates|validates|exact match

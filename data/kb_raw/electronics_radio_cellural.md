@@ -397,3 +397,44 @@ DI11|distinguishes|PC2,PC1
 # PAPR: Peak-to-Average Power Ratio; high PAPR requires PA back-off reducing efficiency; OFDM has high PAPR (~8-12 dB); SC-FDMA has lower PAPR (~2-4 dB)
 # 3GPP: Third Generation Partnership Project; standardization body for cellular (2G GSM onward); releases define features (R15=5G initial, R16/R17=5G evolution, R18+=5G-Advanced)
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+characterized_by|composed_of|X is characterized by its properties = X composed of those attributes
+inverse_of|complement_of|mathematical inverse relationship; symmetric
+determines|determined_by|inverse query direction; "CO6 determines CO8" → CO8 determined_by CO6
+constrains|constrains|exact match
+modified_by|transforms_to|inverse direction; carrier modified by modulation = transforms via modulation
+enables|enables|exact match
+propagates_via|propagates_via|exact match
+governs|governs|exact match
+causes|causes|exact match
+instance_of|instance_of|exact match
+extends|extends|exact match
+specializes|specializes|exact match
+used_by|implements|inverse query direction; "MO13 used_by CG2" → CG2 implements MO13
+selects|selects|exact match
+evolves_to|evolves_to|exact match
+connects_to|connects_to|exact match; symmetric
+uses|requires|exact match in intent; AR2 uses AR6 = AR2 requires AR6
+authenticates|validates|authentication is validation of identity
+virtualizes|models|AR10 virtualizes AR4 = AR10 models AR4 as logical abstraction
+co_located_with|part_of|physical co-location = part of same site
+disaggregates|decomposes_to|exact semantic match; breaking into components
+operates_at|scoped_to|protocol operates at layer = protocol scoped to that layer
+protects|protects|exact match
+complements|complements|exact match; symmetric
+compensates_for|mitigated_by|inverse; SG3 compensates for PG5 = PG5 mitigated_by SG3
+combats|mitigated_by|SG7 combats CO25 = CO25 mitigated_by SG7
+exploits|input_to|SG8 exploits PG5 = PG5 is input to SG8's processing
+decodes|reverses|decoding reverses encoding
+implements|implements|exact match
+amplifies|amplifies|exact match
+digitizes|transforms_to|analog to digital is a transformation
+synthesizes|produces|CP7 synthesizes signal = CP7 produces signal
+processes|input_to|inverse; CP8 processes X = X is input_to CP8
+separates|isolates|exact semantic match
+drives|enables|CP5 drives CP4 = CP5 enables CP4
+references|references|exact match
+improved_by|enables|inverse; X improved by Y = Y enables better X
+affects|degrades|failure affects component = failure degrades component
+distinguishes|distinguishes|exact match

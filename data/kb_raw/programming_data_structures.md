@@ -651,3 +651,26 @@ DI17|distinguishes|ST15,ST12
 # structure categories: linear, heap, hash, tree, graph, probabilistic, cache, text, persistent, specialized, abstract, array, table, forest, list
 # stable/in_place: from algorithms compaction; not repeated here; cross-reference AL* IDs
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+implemented_by|implements|reverse query direction; "ADT implemented_by X" → "X implements ADT"
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+extends|extends|exact match
+implements|implements|exact match
+equivalent_to|equivalent_to|exact match
+requires|requires|exact match
+enables|enables|exact match
+constrains|constrains|exact match
+validates|validates|exact match
+part_of|part_of|exact match
+distinguishes|distinguishes|exact match
+mitigated_by|mitigated_by|exact match
+degrades|degrades|exact match
+favors|favors|exact match
+simplifies|simplifies|exact match
+maintains|maintains|exact match
+modifies|modifies|no canon match — see below
+bounds|bounded_by|reverse query direction; "CB bounds ST" → "ST bounded_by CB"
+affects|influences|"affects" not in canon; closest is "influences"
+characterizes|characterizes|no canon match — flagged in prior docs

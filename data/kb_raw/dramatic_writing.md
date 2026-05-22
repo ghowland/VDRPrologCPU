@@ -348,3 +348,82 @@ DI10|distinguishes|PL1,CO5
 # rel_types: composed_of|requires|drives|generates|unit_of|complements|deepens|delivered_via|supports|produced_by|structures|extends|specializes|contrasts|modifies|frames|fragments|prescribes|loosens|completes|parallels|opposes|guides|disrupts|externalizes|enacts|anchors|enables|shapes|templates|launches|follows|resolves|escalates|pivots|reverses|transforms|earns|misdirects|anti_pattern_of|reveals|identifies|distinguishes|delivers|amplifies|creates|controls|establishes|illuminates|paces|strengthens|refreshes|merges|maximizes|balances|estranges|multiplies|complicates|questions|connects|accumulates|restrains|particularizes|prioritizes|sustained_by|operates_at|contracts|embodies|constrains|maintains|improves|validates|disciplines|degrades|violates|accelerates|required_by
 # craft_notes: practical guidance for writers; principles not rules; exceptions exist for all guidance; mastery = knowing when to break principles
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+composed_of|composed_of|exact match
+requires|requires|exact match
+drives|causes|X drives Y = X causes Y
+generates|produces|X generates Y = X produces Y
+unit_of|part_of|X is unit of Y = X is part of Y
+complements|complements|exact match; symmetric
+deepens|extends|X deepens Y = X extends Y's depth
+delivered_via|flows_to|X delivered via Y = X flows to audience through Y
+supports|enables|X supports Y = X enables Y
+produced_by|result_of|X produced by Y = X is result of Y
+structures|organizes|X structures Y = X organizes Y
+extends|extends|exact match
+specializes|specializes|exact match
+contrasts|contrasts|exact match; symmetric
+modifies|extends|X modifies Y = X extends Y with changes
+frames|frames|exact match
+fragments|decomposes_to|X fragments Y = Y decomposes to parts
+prescribes|constrains|X prescribes Y = X constrains Y's form
+loosens|extends|X loosens Y = X extends Y's flexibility
+completes|extends|X completes Y = X extends Y to wholeness
+parallels|parallel_to|exact match; symmetric
+opposes|opposes|exact match; symmetric
+guides|enables|X guides Y = X enables Y's development
+disrupts|disrupts|exact match
+externalizes|transforms_to|X externalizes Y = Y transforms to visible form
+enacts|implements|X enacts Y = X implements Y through action
+anchors|maintains|X anchors Y = X maintains Y's stability
+enables|enables|exact match
+shapes|influences|X shapes Y = X influences Y
+templates|models|X templates Y = X models Y as pattern
+launches|causes|X launches Y = X causes Y to begin
+follows|follows|exact match
+resolves|solves|X resolves Y = X solves Y
+escalates|amplifies|X escalates Y = X amplifies Y's intensity
+pivots|transforms_to|X pivots Y = Y transforms to new direction
+reverses|reverses|exact match
+transforms|transforms_to|X transforms Y = Y transforms to new state
+earns|enables|X earns Y = X enables Y's credibility
+misdirects|prevents|X misdirects from Y = X prevents seeing Y
+anti_pattern_of|anti_pattern_of|exact match
+reveals|explains|X reveals Y = X explains Y to audience
+identifies|indicates|X identifies Y = X indicates Y
+distinguishes|distinguishes|exact match
+delivers|flows_to|X delivers Y = Y flows to audience
+amplifies|amplifies|exact match
+creates|produces|X creates Y = X produces Y
+controls|controls|exact match
+establishes|produces|X establishes Y = X produces Y's existence
+illuminates|explains|X illuminates Y = X explains Y
+paces|regulates|X paces Y = X regulates Y's speed
+strengthens|amplifies|X strengthens Y = X amplifies Y
+refreshes|transforms_to|X refreshes Y = Y transforms to renewed form
+merges|synthesizes|X merges Y = X synthesizes Y together
+maximizes|amplifies|X maximizes Y = X amplifies Y to fullest
+balances|regulates|X balances Y = X regulates Y's equilibrium
+estranges|disrupts|X estranges Y = X disrupts Y's familiarity
+multiplies|amplifies|X multiplies Y = X amplifies Y's instances
+complicates|extends|X complicates Y = X extends Y's complexity
+questions|critiques|X questions Y = X critiques Y's assumptions
+connects|connects_to|exact match; symmetric
+accumulates|produces|X accumulates Y = X produces Y over time
+restrains|constrains|exact match in intent
+particularizes|specializes|X particularizes Y = X specializes Y to specifics
+prioritizes|favors|X prioritizes Y = X favors Y
+sustained_by|requires|inverse; X sustained by Y = X requires Y
+operates_at|scoped_to|X operates at Y = X scoped to Y's level
+contracts|enables|X contracts with Y = X enables Y's trust
+embodies|implements|X embodies Y = X implements Y physically
+constrains|constrains|exact match
+maintains|maintains|exact match
+improves|enables|X improves Y = X enables Y's quality
+validates|validates|exact match
+disciplines|constrains|X disciplines Y = X constrains Y
+degrades|degrades|exact match
+violates|prevents|X violates Y = X prevents Y from holding
+accelerates|amplifies|X accelerates Y = X amplifies Y's speed
+required_by|requires|inverse direction; X required by Y = Y requires X

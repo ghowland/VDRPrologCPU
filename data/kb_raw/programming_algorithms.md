@@ -494,3 +494,25 @@ CO29|characterizes|CO19
 # stable: yes=equal elements preserve input order; no=may reorder; —=not applicable
 # in_place: yes=O(1) extra space; no=requires auxiliary space; —=not applicable
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+contains|contains|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+extends|extends|exact match
+implements|implements|exact match
+requires|requires|exact match
+enables|enables|exact match
+prevents|prevents|exact match
+equivalent_to|equivalent_to|exact match
+instance_of|instance_of|exact match
+part_of|part_of|exact match
+distinguishes|distinguishes|exact match
+constrains|constrains|exact match
+measured_by|measured_by|no canon match — see below
+determines|determined_by|reverse query direction; swap from/to
+solves|solves|exact match
+solved_in|solves|reverse query direction; "X solved_in Y" → "Y solves X"
+lower_bound|bounded_by|"X lower_bound Y" → "Y bounded_by X"
+characterizes|characterizes|no canon match — see below
+anti_pattern_of|anti_pattern_of|exact match

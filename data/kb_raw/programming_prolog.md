@@ -468,3 +468,44 @@ DI14|distinguishes|CO1,CO38
 # SWI-specific: features marked as SWI are SWI-Prolog specific and may not be available in other Prolog implementations (SICStus, GNU Prolog, XSB, etc.)
 # ISO compliance: predicates marked ISO are defined in ISO/IEC 13211-1:1995; many practical predicates are extensions
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+implements|implements|exact match
+specializes|specializes|exact match
+extends|extends|exact match
+requires|requires|exact match
+enables|enables|exact match
+instance_of|instance_of|exact match
+composed_of|composed_of|exact match
+validates|validates|exact match
+modifies|modifies|no canon — flagged in prior doc
+removes|removes|exact match
+distinguishes|distinguishes|exact match
+characterizes|characterizes|no canon — flagged in prior docs
+implemented_by|implements|reverse query direction
+traversed_by|traverses|reverse query direction; "X traversed_by Y" → "Y traverses X"
+produced_by|produces|reverse query direction; "X produced_by Y" → "Y produces X"
+caused_by|causes|reverse query direction; "X caused_by Y" → "Y causes X"
+broken_by|disrupts|reverse query direction; "X broken_by Y" → "Y disrupts X"
+used_by|input_to|"X used_by Y" → "Y input_to X" or reverse; loose fit
+identified_by|determined_by|"X identified_by Y" → "X determined_by Y"
+created_by|produces|"X created_by Y" → "Y produces X"
+default_for|favors|loose fit; "X default_for Y" ≈ "X favors Y"
+basis_of|foundation_for|"X basis_of Y" → "X foundation_for Y"
+fundamental_to|foundation_for|"X fundamental_to Y" → "X foundation_for Y"
+produces|produces|exact match
+triggers|activates|"triggers" not in canon; closest is "activates"
+tests|validates|"tests" ≈ "validates"; checking correctness
+provides|contains|loose fit; "library provides predicate" ≈ "contains"
+supports|enables|loose fit; "X supports Y" ≈ "X enables Y"
+optimizes|simplifies|"X optimizes Y" ≈ "X simplifies Y"
+reduces|simplifies|"X reduces Y" ≈ "X simplifies Y"
+improves|simplifies|"X improves Y" ≈ "X simplifies Y"
+achieves|solves|"X achieves Y" ≈ "X solves Y"
+leverages|depends_on|"X leverages Y" → "X depends_on Y"
+pattern_of|instance_of|"X pattern_of Y" → "X instance_of Y"
+breaks|disrupts|"X breaks Y" → "X disrupts Y"
+creates|produces|"X creates Y" → "X produces Y"
+uses|depends_on|"X uses Y" → "X depends_on Y"
+lacking_in|limits|"X lacking_in Y" → "X limits Y"; property Y doesn't have
+ensures|validates|"X ensures Y" ≈ "X validates Y"

@@ -473,3 +473,19 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|de
 notation: _fk suffix=foreign key reference to parent table; ∅=zero/null morpheme; 3sg=third person singular; AmE=American English; BrE=British English; NP=noun phrase; VP=verb phrase; AdjP=adjective phrase; AdvP=adverb phrase; PP=prepositional phrase
 confidence: all facts asserted at reference_grammar confidence level
 scope: Modern Standard English prescriptive grammar; excludes dialectal, historical, and generative-formal representations
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+specializes|specializes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+requires|requires|exact match
+enables|enables|exact match
+prevents|prevents|exact match
+depends_on|depends_on|exact match
+determined_by|determined_by|exact match
+transforms_to|transforms_to|exact match
+instance_of|instance_of|exact match
+validates|validates|exact match
+extends|extends|exact match
+composed_of|composed_of|exact match
+generalizes|generalizes|exact match

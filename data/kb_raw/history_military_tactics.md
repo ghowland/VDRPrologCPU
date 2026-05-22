@@ -534,3 +534,48 @@ DI12|distinguishes|FM5,ER6
 # tactical_significance: why the battle matters for the study of tactics specifically, not political/strategic significance alone
 # dominant_arm: the combat arm (infantry, cavalry, artillery, armor, air, combined) that was the primary determinant of battlefield success in that era
 # confidence: synthetic domain knowledge — not extracted from a single source document
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match
+contrasts|contrasts|exact match
+complements|complements|exact match
+implements|implements|exact match
+constrains|constrains|exact match
+influences|influences|exact match
+distinguishes|distinguishes|exact match
+synthesizes|synthesizes|exact match
+counters|reverses|"X counters Y" ≈ "X reverses Y"; closest canon for active opposition
+supports|enables|"X supports Y" ≈ "X enables Y"; loose fit
+modifies|modifies|no canon — flagged in prior docs
+governs|controls|"X governs Y" → "X controls Y"
+links|connects_to|"X links Y,Z" → "X connects_to Y" + "X connects_to Z"
+defined_by|determined_by|"X defined_by Y" → "X determined_by Y"; same mapping as philosophy doc
+obsoletes|replaces|"X obsoletes Y" → "X replaces Y"
+breaks|disrupts|"X breaks Y" → "X disrupts Y"
+generates|produces|"X generates Y" → "X produces Y"
+generated_by|produces|reverse query direction; "X generated_by Y" → "Y produces X"
+defeated_by|overcomes|reverse query direction; "X defeated_by Y" → "Y overcomes X"
+evolves_to|evolves_to|exact match
+evolved_from|derived_from|"X evolved_from Y" → "X derived_from Y"
+contemporary_with|parallel_to|"X contemporary_with Y" → "X parallel_to Y"; same mapping as philosophy
+complemented_by|complements|reverse query direction
+demonstrates|validates|"battle demonstrates tactic" ≈ "battle validates tactic"
+pioneers|founded|"commander pioneers innovation" ≈ "commander founded innovation"
+adapts|extends|"X adapts Y" ≈ "X extends Y"
+masters|implements|"commander masters doctrine" ≈ "commander implements doctrine"; loose fit
+transitions_to|evolves_to|"X transitions_to Y" → "X evolves_to Y"
+defines|determines|reverse of determined_by; "innovation defines era" → "era determined_by innovation"

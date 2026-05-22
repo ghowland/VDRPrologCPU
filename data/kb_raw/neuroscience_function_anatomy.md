@@ -563,3 +563,20 @@ rel_types: enables|requires|prevents|specializes|generalizes|part_of|contains|fo
 notation: → denotes projection direction in pathway descriptions; _fk=foreign key; ~=approximate; L/R=left/right; CN=cranial nerve; BG=basal ganglia; LMN/UMN=lower/upper motor neuron; MSN=medium spiny neuron; PFC=prefrontal cortex; DLPFC=dorsolateral PFC; ACC=anterior cingulate cortex; PCC=posterior cingulate cortex; VTA=ventral tegmental area; SNc/SNr=substantia nigra pars compacta/reticulata; GPi/GPe=globus pallidus internal/external; STN=subthalamic nucleus; LGN/MGN=lateral/medial geniculate nucleus; VPL/VPM=ventral posterolateral/posteromedial; NTS=nucleus tractus solitarius; PAG=periaqueductal gray; RVM=rostral ventromedial medulla; ARAS=ascending reticular activating system; MLF=medial longitudinal fasciculus; DCML=dorsal column-medial lemniscus; CST=corticospinal tract; BBB=blood-brain barrier; CSF=cerebrospinal fluid; IML=intermediolateral cell column; SCN=suprachiasmatic nucleus; PVN=paraventricular nucleus; LHA=lateral hypothalamic area; VMH=ventromedial hypothalamus; VLPO=ventrolateral preoptic area; NMJ=neuromuscular junction; LTP/LTD=long-term potentiation/depression; STDP=spike-timing-dependent plasticity; EPSP/IPSP=excitatory/inhibitory postsynaptic potential; DAT/NET/SERT=dopamine/norepinephrine/serotonin transporter; MAO/COMT=monoamine oxidase/catechol-O-methyltransferase; GABA=γ-aminobutyric acid; ACh=acetylcholine; NE=norepinephrine; DA=dopamine; 5-HT=serotonin; AMPA=α-amino-3-hydroxy-5-methyl-4-isoxazolepropionic acid; NMDA=N-methyl-D-aspartate; mGluR=metabotropic glutamate receptor; GPCR=G-protein coupled receptor; Gs/Gi/Gq=stimulatory/inhibitory/phospholipase-C-coupled G-protein; cAMP=cyclic adenosine monophosphate; IP3/DAG=inositol trisphosphate/diacylglycerol; PKA/PKC=protein kinase A/C; HPA=hypothalamic-pituitary-adrenal; CRH=corticotropin-releasing hormone; ACTH=adrenocorticotropic hormone; ADH=antidiuretic hormone; GnRH=gonadotropin-releasing hormone; FSH/LH=follicle-stimulating/luteinizing hormone; TSH=thyroid-stimulating hormone; MCA/ACA/PCA=middle/anterior/posterior cerebral artery; PICA=posterior inferior cerebellar artery; ICA=internal carotid artery; AComm/PComm=anterior/posterior communicating artery; MRI=magnetic resonance imaging; CT=computed tomography; DBS=deep brain stimulation; MS=multiple sclerosis; RAPD=relative afferent pupillary defect; VOR=vestibulo-ocular reflex; SWS=slow-wave sleep; NREM=non-rapid eye movement; REM=rapid eye movement; PV=parvalbumin; GFAP=glial fibrillary acidic protein; MBP=myelin basic protein; Hz=hertz; mV=millivolts; m/s=meters per second
 confidence: all facts at reference_neuroscience confidence level; clinical presentations are typical/classic; individual variation exists
 scope: functional neuroanatomy of adult human nervous system; covers structure-function relationships, major circuits, neurotransmitter systems, and key clinical correlates; excludes detailed developmental neuroscience, computational neuroscience formalisms, and invertebrate systems
+
+# relation_mapping(doc_rel|canonical_rel|notes)
+enables|enables|exact match
+requires|requires|exact match
+prevents|prevents|exact match
+specializes|specializes|exact match
+generalizes|generalizes|exact match
+part_of|part_of|exact match
+contains|contains|exact match
+follows|follows|exact match
+precedes|precedes|exact match
+instance_of|instance_of|exact match
+determined_by|determined_by|exact match
+equivalent_to|equivalent_to|exact match
+extends|extends|exact match
+derived_from|derived_from|exact match
+composed_of|composed_of|exact match
