@@ -416,6 +416,21 @@ pub const KB = struct {
     last_modified: i32 = 0,
     version: i32 = 1,
 
+    // offset to FunctorIndex in arena, -1 if not built
+    // built lazily when rules_count exceeds FUNCTOR_INDEX_THRESHOLD
+    // accelerates rule head lookup by functor/arity
+    functor_index_offset: i32 = -1,
+
+    // true if this KB has a functor index for fast rule head lookup
+    pub fn hasFunctorIndex(self: KB) bool {
+        return self.functor_index_offset != -1;
+    }
+
+    // true if this KB should have a functor index but doesn't yet
+    pub fn needsFunctorIndex(self: KB) bool {
+        return self.rules_count >= FUNCTOR_INDEX_THRESHOLD and self.functor_index_offset == -1;
+    }
+
     // Padded to 256 bytes for cache line alignment.
     // training_arena is the only nullable pointer in the system.
 
@@ -662,6 +677,23 @@ pub const Session = struct {
     // Clone lineage
     parent_session_id: VdrId = .{},
     clone_generation: i32 = 0,
+
+    // per-session cache of atom_id → RelationType mappings
+    // avoids repeated string lookups during query execution
+    // reset on grant change or KB access modification
+    atom_rel_cache_offset: i32 = -1,
+
+    // timestamp of last availability surface rebuild
+    // compared against KB modification times to detect staleness
+    surface_last_built: i32 = 0,
+
+    // true if the surface needs rebuilding (grant change, ingestion, training)
+    surface_dirty: bool = true,
+
+    // mark surface as needing rebuild on next query
+    pub fn invalidateSurface(self: *Session) void {
+        self.surface_dirty = true;
+    }
 
     pub fn isActive(self: Session) bool {
         return self.state == .active;
@@ -1036,6 +1068,30 @@ pub const LevelStats = struct {
     l3_transitive_closures: i64 = 0,
     l3_inverse_lookups: i64 = 0,
 
+    // L3 operations resolved by pre-LLM pattern detection
+    // (query answered before the LLM generated any tokens)
+    l3_pre_resolutions: i64 = 0,
+
+    // L2 operations where LLM selected from candidates provided by pre-resolution
+    // (pre-resolution found options but couldn't disambiguate)
+    l2_assisted_selections: i64 = 0,
+
+    // L1 operations where pre-resolution ran but found nothing
+    // (pattern detection fired but no matching data existed)
+    l1_pre_resolution_misses: i64 = 0,
+
+    // ratio of pre-resolution hits to total pre-resolution attempts, Q16
+    pub fn preResolutionHitRate(self: LevelStats) Q16 {
+        const attempts = self.l3_pre_resolutions + self.l2_assisted_selections + self.l1_pre_resolution_misses;
+        if (attempts == 0) return Q16.zero();
+        const hits = self.l3_pre_resolutions + self.l2_assisted_selections;
+        return Q16.fromParts(
+            @intCast(@divTrunc(hits * Q16.D, attempts)),
+            0,
+            0,
+        );
+    }
+
     pub fn totalCount(self: LevelStats) i64 {
         return self.l1_count + self.l2_count + self.l3_count;
     }
@@ -1179,6 +1235,16 @@ pub const WorkItem = struct {
     scale_v: i32 = 0,
     // Completion signaling
     completion: bool = false,
+
+    // offset into per-core scratch where L3PreResolution result is stored
+    // -1 if no pre-resolution was attempted for this work item
+    // set by the pre-resolution pass before LLM generation begins
+    pre_resolution_offset: i32 = -1,
+
+    // offset into per-core scratch where QueryClassification is stored
+    // -1 if no classification was performed
+    // the pinned thread reads this to decide whether to attempt L3
+    classification_offset: i32 = -1,
 };
 
 // ============================================================
@@ -1681,6 +1747,8 @@ pub const RelationType = enum(i32) {
     synthesizes, // Philosophy: X combines elements from multiple Y into new framework
     transmits, // History: X conveys Y to a new context or tradition without fundamentally altering
     parallel_to, // Philosophy: X and Y are structurally similar but independently arising; symmetric
+    traverses, // General: X systematically moves through or explores the structure of Y
+    removes, // General: X eliminates or deletes Y from existence or from a containing structure
 
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
@@ -2083,6 +2151,311 @@ pub const ModelReductionConfig = struct {
         const lm_head = d * @as(i64, self.reduced_vocab_size) * bytes_per_param;
         return n * per_layer + lm_head;
     }
+};
+
+// ============================================================
+// Prolog Invocation
+// ============================================================
+
+// Result of pre-LLM structural pattern detection on user input.
+// Produced by classifyQueryPattern() before the LLM generates tokens.
+// Lives in per-core scratch — ephemeral, destroyed after the inference cycle.
+pub const QueryClassification = struct {
+    // true if input matches a relation pattern like "what does X enable"
+    has_relation: bool = false,
+    // the detected RelationType if has_relation is true
+    rel_type: RelationType = .unknown,
+    // VdrId of the source entity if detected, NONE if wildcard
+    from_hint: VdrId = .{},
+    // VdrId of the target entity if detected, NONE if wildcard
+    to_hint: VdrId = .{},
+
+    // true if input matches a transitive pattern like "all dependencies of X"
+    has_transitive: bool = false,
+    // the transitive relation type if has_transitive is true
+    transitive_type: RelationType = .unknown,
+    // the root entity for transitive closure
+    transitive_root: VdrId = .{},
+
+    // true if input matches a direct fact lookup like "value of alpha_em"
+    has_fact: bool = false,
+    // KB path hash for fact lookup, 0 if unresolved
+    fact_path_hash: u32 = 0,
+    // fact slot hint, -1 if scanning all slots
+    fact_slot_hint: i32 = -1,
+
+    // true if input matches an aggregation like "how many enables relations"
+    has_aggregation: bool = false,
+    // aggregation type: 0=count, 1=sum, 2=list
+    agg_type: i32 = 0,
+    // target for aggregation (RelationType slot or KB path hash)
+    agg_target: i32 = 0,
+
+    // overall confidence in the classification, Q16 (0 = no match, 65536 = certain)
+    confidence: Q16 = .{},
+
+    // how many patterns matched (0 = no structural match, pass to LLM)
+    match_count: i32 = 0,
+
+    // true if L3 pre-resolution should be attempted before LLM generation
+    pub fn shouldAttemptL3(self: QueryClassification) bool {
+        return self.match_count > 0 and self.confidence.v >= 32768; // >= 50%
+    }
+
+    // true if only one pattern matched unambiguously
+    pub fn isUnambiguous(self: QueryClassification) bool {
+        return self.match_count == 1 and self.confidence.v >= 52428; // >= 80%
+    }
+};
+
+// A parsed relation pattern extracted from user input text.
+// Produced by matchRelationPattern() during structural pattern detection.
+// Ephemeral — lives in per-core scratch during classification.
+pub const RelationPattern = struct {
+    // the detected relation type
+    rel_type: RelationType = .unknown,
+    // VdrId of source entity if identified, NONE if wildcard
+    from_id: VdrId = .{},
+    // VdrId of target entity if identified, NONE if wildcard
+    to_id: VdrId = .{},
+    // confidence in this specific pattern match, Q16
+    match_confidence: Q16 = .{},
+    // byte offset in input where the relation keyword was found
+    keyword_offset: i32 = 0,
+    // length of the matched keyword in bytes
+    keyword_length: i16 = 0,
+};
+
+// A Prolog rule that matched a query's functor and arity during scan.
+// Collected during scanForMatchingRules(), ranked, then presented to
+// the LLM or executed directly if unambiguous.
+// Ephemeral — lives in per-core scratch during query execution.
+pub const RuleCandidate = struct {
+    // pointer to the matched rule in arena memory
+    rule_offset: i32 = 0,
+    // KB that owns this rule
+    kb_id: VdrId = .{},
+    // head term offset for quick re-access without re-scanning
+    head_term_offset: i32 = 0,
+    // rule's historical success rate, Q16 (from rule.successRate())
+    success_rate: Q16 = .{},
+    // rule's total fire count — higher means more proven
+    fire_count: i32 = 0,
+    // relevance score combining success rate and recency, Q16
+    relevance: Q16 = .{},
+};
+
+// Per-session cache mapping Prolog atom IDs to RelationType enum values.
+// Avoids repeated string→atom→RelationType lookups during query execution.
+// Lives in per-core session scratch — dies with the session.
+pub const ATOM_REL_CACHE_SIZE: usize = 64;
+
+pub const AtomRelTypeCacheEntry = struct {
+    // the Prolog atom ID (from the term store's atom table)
+    atom_id: i32 = -1,
+    // the resolved RelationType for this atom
+    rel_type: RelationType = .unknown,
+};
+
+pub const AtomRelTypeCache = struct {
+    // fixed-size array of cached mappings
+    entries: [ATOM_REL_CACHE_SIZE]AtomRelTypeCacheEntry =
+        [_]AtomRelTypeCacheEntry{.{}} ** ATOM_REL_CACHE_SIZE,
+    // current number of cached entries
+    count: i32 = 0,
+
+    // look up a cached atom→RelationType mapping, null if not cached
+    pub fn lookup(self: *AtomRelTypeCache, atom_id: i32) ?RelationType {
+        for (self.entries[0..@intCast(self.count)]) |entry| {
+            if (entry.atom_id == atom_id) return entry.rel_type;
+        }
+        return null;
+    }
+
+    // insert a new mapping, silently drops if cache is full
+    pub fn insert(self: *AtomRelTypeCache, atom_id: i32, rel_type: RelationType) void {
+        if (self.count >= ATOM_REL_CACHE_SIZE) return;
+        self.entries[@intCast(self.count)] = .{
+            .atom_id = atom_id,
+            .rel_type = rel_type,
+        };
+        self.count += 1;
+    }
+
+    // clear all entries (on session reset or grant change)
+    pub fn reset(self: *AtomRelTypeCache) void {
+        self.count = 0;
+    }
+};
+
+// Compact summary of a KB's contents for the availability surface.
+// Stored as structured facts in session_root._llm.concepts.kb_coverage.
+// Rebuilt on session-level events (creation, grant change, ingestion).
+pub const KbSummary = struct {
+    // KB identity
+    kb_id: VdrId = .{},
+    // total facts in this KB
+    facts_count: i32 = 0,
+    // total rules in this KB
+    rules_count: i32 = 0,
+    // total typed relations in this KB
+    relations_count: i32 = 0,
+    // whether this KB has weight data (inference-relevant)
+    has_weights: bool = false,
+    // whether this KB was created by compaction ingestion
+    from_compaction: bool = false,
+    // path hash for quick matching against query context
+    path_hash: u32 = 0,
+};
+
+// Summary of available relations for one RelationType slot.
+// Part of the availability surface in session_root._llm.concepts.available_relations.
+// The LLM reads these to decide whether L2 invocation is viable.
+pub const RelationSurfaceEntry = struct {
+    // which RelationType slot this summarizes
+    rel_type_slot: i16 = 0,
+    // total count of this relation type across all accessible KBs
+    total_count: i32 = 0,
+    // how many distinct KBs contain this relation type
+    kb_count: i32 = 0,
+    // whether this type is transitive (copied from RelationType.isTransitive())
+    is_transitive: bool = false,
+    // whether this type is symmetric (copied from RelationType.isSymmetric())
+    is_symmetric: bool = false,
+    // whether an inverse type exists (inverse() != .unknown)
+    has_inverse: bool = false,
+};
+
+// Summary of available rules for one functor/arity combination.
+// Part of the availability surface in session_root._llm.concepts.available_rules.
+// The LLM reads these to decide whether an L2 Prolog query is viable.
+pub const RuleSurfaceEntry = struct {
+    // atom ID of the rule head functor
+    functor_id: i32 = 0,
+    // arity of the rule head (number of arguments)
+    arity: i16 = 0,
+    // total count of rules with this functor/arity across accessible KBs
+    total_count: i32 = 0,
+    // average success rate across all matching rules, Q16
+    avg_success_rate: Q16 = .{},
+    // total fire count across all matching rules
+    total_fire_count: i64 = 0,
+    // text offset for the functor name (for LLM readability)
+    functor_name_offset: i32 = 0,
+    // functor name length
+    functor_name_length: i16 = 0,
+};
+
+// Entry in the per-KB functor hash index for fast rule head lookup.
+// Built lazily when a KB's rule count exceeds FUNCTOR_INDEX_THRESHOLD.
+// Lives in the KB's arena region alongside the rules.
+pub const FunctorIndexEntry = struct {
+    // atom ID of the rule head functor
+    functor_id: i32 = -1,
+    // arity of the rule head
+    arity: i16 = 0,
+    // index into the KB's rules array for the first matching rule
+    first_rule_index: i32 = -1,
+    // count of rules with this functor/arity in this KB
+    rule_count: i32 = 0,
+};
+
+// Threshold: build functor index when KB has more rules than this
+pub const FUNCTOR_INDEX_THRESHOLD: i32 = 64;
+
+pub const FUNCTOR_INDEX_BUCKETS: usize = 64;
+
+pub const FunctorIndex = struct {
+    // hash buckets mapping functor_id hash → FunctorIndexEntry index, -1 = empty
+    buckets: [FUNCTOR_INDEX_BUCKETS]i32 = [_]i32{-1} ** FUNCTOR_INDEX_BUCKETS,
+    // offset into arena where FunctorIndexEntry array lives
+    entries_offset: i32 = -1,
+    // number of distinct functor/arity combinations indexed
+    entries_count: i32 = 0,
+    // offset into arena where i32 chain array lives (parallel to entries, for hash collisions)
+    chains_offset: i32 = -1,
+    // timestamp of last rebuild
+    last_rebuilt: i32 = 0,
+
+    // reconstruct the entries slice from arena base + stored offset
+    fn getEntries(self: *FunctorIndex, arena: *Arena) []FunctorIndexEntry {
+        if (self.entries_offset < 0 or self.entries_count <= 0) return &.{};
+        const ptr = arena.base + @as(usize, @intCast(self.entries_offset));
+        const typed: [*]FunctorIndexEntry = @ptrCast(@alignCast(ptr));
+        return typed[0..@intCast(self.entries_count)];
+    }
+
+    // reconstruct the collision chain slice from arena base + stored offset
+    // each element is the index of the next entry in the chain, -1 = end
+    fn getChains(self: *FunctorIndex, arena: *Arena) []i32 {
+        if (self.chains_offset < 0 or self.entries_count <= 0) return &.{};
+        const ptr = arena.base + @as(usize, @intCast(self.chains_offset));
+        const typed: [*]i32 = @ptrCast(@alignCast(ptr));
+        return typed[0..@intCast(self.entries_count)];
+    }
+
+    // look up a functor/arity in the index, returns matching entry or null
+    pub fn lookup(self: *FunctorIndex, functor_id: i32, arity: i16, arena: *Arena) ?*FunctorIndexEntry {
+        if (!self.isBuilt()) return null;
+        const hash = @as(u32, @bitCast(functor_id)) % FUNCTOR_INDEX_BUCKETS;
+        var idx = self.buckets[hash];
+        const entries = self.getEntries(arena);
+        const chains = self.getChains(arena);
+        while (idx >= 0 and idx < self.entries_count) {
+            const entry = &entries[@intCast(idx)];
+            if (entry.functor_id == functor_id and entry.arity == arity) {
+                return entry;
+            }
+            idx = chains[@intCast(idx)];
+        }
+        return null;
+    }
+
+    // true if this index has been built (entries_offset != -1)
+    pub fn isBuilt(self: FunctorIndex) bool {
+        return self.entries_offset != -1;
+    }
+};
+
+// Result of L3 pre-resolution attempted before LLM token generation.
+// Written to prompt_current if resolution succeeds.
+// The LLM reads this and either frames the answer (cheap) or ignores
+// it and reasons from weights (expensive, shouldn't happen often).
+pub const L3PreResolution = struct {
+    // whether pre-resolution produced a result
+    resolved: bool = false,
+    // how the resolution was achieved
+    resolution_type: ResolutionType = .none,
+    // number of result bindings
+    result_count: i32 = 0,
+    // offset into scratch where result bindings are stored
+    results_offset: i32 = -1,
+    // the original query classification that triggered this resolution
+    classification_confidence: Q16 = .{},
+    // microseconds spent on pre-resolution (integer, not float)
+    resolution_time_us: i32 = 0,
+
+    // true if the LLM should frame this result rather than re-derive
+    pub fn shouldFrame(self: L3PreResolution) bool {
+        return self.resolved and self.result_count > 0;
+    }
+};
+
+pub const ResolutionType = enum(i8) {
+    // no resolution attempted or nothing matched
+    none = 0,
+    // resolved via RelationIndex typed relation scan
+    relation_index = 1,
+    // resolved via transitive closure BFS
+    transitive_closure = 2,
+    // resolved via inverse() dispatch
+    inverse_lookup = 3,
+    // resolved via symmetric auto-swap
+    symmetric_swap = 4,
+    // resolved via general Prolog fire_and_commit
+    prolog_rule = 5,
+    // resolved via direct KB fact read
+    fact_read = 6,
 };
 
 // ============================================================
