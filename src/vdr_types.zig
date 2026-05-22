@@ -1749,6 +1749,17 @@ pub const RelationType = enum(i32) {
     parallel_to, // Philosophy: X and Y are structurally similar but independently arising; symmetric
     traverses, // General: X systematically moves through or explores the structure of Y
     removes, // General: X eliminates or deletes Y from existence or from a containing structure
+    protects, // General: X shields or defends Y from harm, damage, or degradation
+    threatens, // General: X poses a risk of harm or damage to Y
+    evolves_to, // General: X develops progressively into successor Y, building upon X
+    connects_to, // General: X has a physical or logical bidirectional link to Y
+    propagates_via, // General: X physically travels through or by means of medium/mode Y
+    contrasts, // General: X highlights or illuminates Y's qualities through meaningful difference; symmetric
+    disrupts, // General: X introduces sudden disorder or disturbance into Y's functioning
+    frames, // General: X spatially or contextually surrounds Y, directing attention toward Y
+    organizes, // General: X arranges multiple Y into coherent structure or relationship
+    controls, // General: X directs or determines the behavior or movement of Y
+    input_to, // General: X is consumed or incorporated as feedstock by process Y
 
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
@@ -1884,11 +1895,29 @@ pub const RelationType = enum(i32) {
             .bounded_by => .unknown, // "bounds" is query reversal
             .simplifies => .unknown, // "simplified_by" is query reversal
             .maintains => .unknown, // "maintained_by" is query reversal
-            .input_to, // General: X is consumed or incorporated as feedstock by process Y
+            .protects => .threatens,
+            .threatens => .protects,
+            .input_to => .unknown, // "receives_input" is query reversal
+            .reverses => .unknown, // "reversed_by" is query reversal
+            .alternative_to => .alternative_to, // symmetric
+            .hazard_of => .unknown, // "has_hazard" is query reversal
+            .protects => .unknown, // "protected_by" is query reversal
+            .threatens => .unknown, // "threatened_by" is query reversal
+            .indicates => .determined_by, // what X indicates is determined by X
+            .traverses => .unknown, // "traversed_by" is query reversal
+            .removes => .unknown, // "removed_by" is query reversal
+            .evolves_to => .unknown, // "evolved_from" is query reversal
+            .connects_to => .connects_to, // symmetric
+            .propagates_via => .unknown, // "carries" is query reversal
+            .virtualizes => .unknown, // "virtualized_by" is query reversal
+            .contrasts => .contrasts, // symmetric
+            .disrupts => .unknown, // "disrupted_by" is query reversal
+            .frames => .unknown, // "framed_by" is query reversal
+            .organizes => .unknown, // "organized_by" is query reversal
+            .controls => .unknown, // "controlled_by" is query reversal
 
             // Identity and binding
-            .instance_of,
-            => .has_type,
+            .instance_of => .has_type,
             .has_type => .instance_of,
             .named => .unknown, // "name_of" is query reversal
             .aliases => .aliases, // symmetric
