@@ -1901,9 +1901,6 @@ pub const RelationType = enum(i32) {
             .reverses => .unknown, // "reversed_by" is query reversal
             .alternative_to => .alternative_to, // symmetric
             .hazard_of => .unknown, // "has_hazard" is query reversal
-            .protects => .unknown, // "protected_by" is query reversal
-            .threatens => .unknown, // "threatened_by" is query reversal
-            .indicates => .determined_by, // what X indicates is determined by X
             .traverses => .unknown, // "traversed_by" is query reversal
             .removes => .unknown, // "removed_by" is query reversal
             .evolves_to => .unknown, // "evolved_from" is query reversal
@@ -1915,6 +1912,8 @@ pub const RelationType = enum(i32) {
             .frames => .unknown, // "framed_by" is query reversal
             .organizes => .unknown, // "organized_by" is query reversal
             .controls => .unknown, // "controlled_by" is query reversal
+            .evolves_to => .derived_from, // was .unknown
+            .controls => .determined_by, // was .unknown
 
             // Identity and binding
             .instance_of => .has_type,
@@ -1979,7 +1978,6 @@ pub const RelationType = enum(i32) {
             .selects => .unknown, // "selected_by" is query reversal
             .modifies => .unknown, // "modified_by" is query reversal
             .heads => .unknown, // "headed_by" is query reversal
-            .complements => .unknown, // "complemented_by" is query reversal
             .subcategorizes => .unknown, // "subcategorized_by" is query reversal
             .distributes_as => .unknown, // "distribution_of" is query reversal
 
@@ -2022,6 +2020,9 @@ pub const RelationType = enum(i32) {
             .complements,
             .parallel_to,
             .opposes,
+            .connects_to,
+            .alternative_to,
+            .contrasts,
             => true,
             else => false,
         };
@@ -2041,6 +2042,9 @@ pub const RelationType = enum(i32) {
             .depends_on,
             .scoped_to,
             .flows_to,
+            .derived_from,
+            .transforms_to,
+            .composed_of,
             => true,
             else => false,
         };
