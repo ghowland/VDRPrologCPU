@@ -188,3 +188,130 @@ next game out reading a doc that has mixed data in it, is has a type in prose in
 
 ---
 
+Input: A multi-part document pasted into the prompt. Let's say roughly:
+
+```
+"Here's the Q3 sales data for the western region. We saw some interesting 
+trends this quarter. 
+
+{"region": "west", "q3_2025": {"july": 142000, "august": 158000, 
+"september": 171000}, "growth_rate": 0.12, "top_products": 
+["widget_a", "widget_b", "gadget_x"]}
+
+As you can see the growth rate exceeded expectations. The full breakdown 
+is in the attached spreadsheet. Also note that widget_b had some supply 
+chain issues in August which Janet mentioned in her email last week.
+
+Please write a report on these findings."
+```
+
+**Tokenize:** The tokenizer hits mixed content. It needs to detect boundaries between prose, structured data, and references.
+
+Prose segments tokenize normally — atoms against the atom table. But the JSON block has a different structure. The tokenizer detects `{` as a JSON opening delimiter and switches to structured data parsing. The JSON is not tokenized as words — it's parsed as key-value pairs producing typed terms directly. `"region": "west"` becomes a Term with `type=.pair`, key atom `region`, value text `west`. `"july": 142000` becomes a pair with key atom `july` and value Term with `type=.integer`, `primary_id=142000`. The `"growth_rate": 0.12` is a problem — 0.12 is a float. The system converts to Q16: `v=7864, r0=33, r1=0` (0.12 × 65536 = 7864.32, remainder captured). No float stored.
+
+**Spell check:** Prose tokens checked. "spreadsheet" matches. "widget_b" — compound token, checked as whole and parts. No corrections needed. The JSON content skips spell checking — it's structured data, not prose.
+
+**Domain detection:** Multiple signals. "Q3 sales data" anchors to `root.knowledge.business_accounting`. "region" and "western" anchor to `root.knowledge.geography`. "growth_rate" reinforces business/economics. "supply chain" anchors to `root.knowledge.economics` or `root.knowledge.business_accounting.supply_chain`. "report" anchors to `root.language.english.phrasing.register_patterns.RP1` — academic/formal prose register. No programming domain detected — this is a business analytics query.
+
+**Content classification by segment:**
+
+Segment 1 (prose intro): Speech act is scene-setting (DC1). Establishes context. Tokens resolve to business domain references.
+
+Segment 2 (JSON): Structured data. Parsed to native terms, not tokenized as text. The entire JSON becomes a set of facts:
+
+```
+fact(tag=.text,    key=region, value="west")
+fact(tag=.integer, key=july, primary_id=142000)
+fact(tag=.integer, key=august, primary_id=158000)  
+fact(tag=.integer, key=september, primary_id=171000)
+fact(tag=.vdr,     key=growth_rate, value=Q16{v=7864, r0=33, r1=0})
+fact(tag=.text,    key=top_products[0], value="widget_a")
+fact(tag=.text,    key=top_products[1], value="widget_b")
+fact(tag=.text,    key=top_products[2], value="gadget_x")
+```
+
+Native types. The integers are i32 in the Term struct. The growth rate is Q16 with exact remainder. The LLM can do arithmetic on these values directly — computing quarter-over-quarter change, comparing months, verifying the growth rate claim — through Q16 operations with no float conversion.
+
+Segment 3 (prose with references): Two unresolvable references detected. "the attached spreadsheet" — the system checks for attachments in the session context. No attachment found. This is flagged as an unresolved reference. "Janet mentioned in her email last week" — the system checks session KBs for a `janet` entity and an email reference. If the session has no email integration and no person named Janet in its context, both are flagged as unresolvable external references.
+
+Segment 4 (instruction): "write a report on these findings" — speech act is directive (SA4). The instruction is a command to produce output of type `report`, register `formal/academic` (RP1), covering the data in the preceding segments.
+
+**Disambiguation map lookups on key terms:**
+
+"sales" → [VdrId(business.sales_revenue), VdrId(commercial_order.discount_sales)]. Business anchor survives. Discount sense drops.
+
+"growth_rate" → [VdrId(business.growth_metric), VdrId(biology.population_growth), VdrId(economics.gdp_growth)]. Business and economics survive. Biology drops.
+
+"supply chain" → [VdrId(business.supply_chain), VdrId(economics.supply_chain_theory)]. Both survive — related domains.
+
+"report" → [VdrId(document_type.report), VdrId(english.register.academic_prose)]. Both survive — the document type tells the system what to produce, the register tells it how.
+
+**GEMM scope:**
+
+```
+root.knowledge.business_accounting    (sales, revenue, supply chain)
+root.knowledge.economics              (growth rates, supply chain theory)
+root.knowledge.geography              (regional analysis)
+root.language.english.grammar         (always in scope)
+root.language.english.phrasing        (register: formal report writing)
+```
+
+Five subtrees. No programming, no science, no philosophy, no cooking.
+
+**Assert to prompt_current:**
+
+```
+// Domain anchors
+fact(tag=.reference, value=VdrId(business_accounting.sales), confidence=CF8)
+fact(tag=.reference, value=VdrId(business_accounting.quarterly_reporting), confidence=CF8)
+
+// Parsed structured data (native types, not text)
+fact(tag=.integer, key=VdrId(sales.july), primary_id=142000, confidence=CF8)
+fact(tag=.integer, key=VdrId(sales.august), primary_id=158000, confidence=CF8)
+fact(tag=.integer, key=VdrId(sales.september), primary_id=171000, confidence=CF8)
+fact(tag=.vdr, key=VdrId(metrics.growth_rate), value=Q16{7864,33,0}, confidence=CF8)
+fact(tag=.text, key=VdrId(geography.region), value="west", confidence=CF8)
+fact(tag=.reference, value=VdrId(products.widget_a), confidence=CF8)
+fact(tag=.reference, value=VdrId(products.widget_b), confidence=CF8)
+fact(tag=.reference, value=VdrId(products.gadget_x), confidence=CF8)
+
+// Derived facts (computed mechanically from parsed data)
+fact(tag=.integer, key=VdrId(sales.q3_total), primary_id=471000, confidence=CF1)
+fact(tag=.vdr, key=VdrId(sales.july_to_aug_change), value=Q16{...}, confidence=CF1)
+fact(tag=.vdr, key=VdrId(sales.aug_to_sep_change), value=Q16{...}, confidence=CF1)
+fact(tag=.reference, value=VdrId(trend.monotonic_increasing), confidence=CF1)
+
+// Unresolved references
+fact(tag=.text, value="attached spreadsheet", resolved=false)
+fact(tag=.text, value="Janet's email last week", resolved=false)
+
+// Contextual annotations
+fact(tag=.reference, value=VdrId(products.widget_b.supply_chain_issue))
+fact(tag=.relation, value=VdrId(temporal.august))
+fact(tag=.relation, value=VdrId(speech_act.directive))
+fact(tag=.relation, value=VdrId(document_type.report))
+fact(tag=.relation, value=VdrId(register.academic_formal))
+
+// GEMM scope
+fact(tag=.vector, value=VdrId(gemm_scope.business_accounting))
+fact(tag=.vector, value=VdrId(gemm_scope.economics))
+fact(tag=.vector, value=VdrId(gemm_scope.geography))
+fact(tag=.vector, value=VdrId(gemm_scope.language.english.grammar))
+fact(tag=.vector, value=VdrId(gemm_scope.language.english.phrasing))
+
+// Original text
+fact(tag=.text, value="Here's the Q3 sales data...")
+```
+
+Key things that happened before the LLM runs:
+
+The JSON was parsed to native integers and Q16, not stored as text. The system already computed Q3 total (471,000), month-over-month changes, and detected a monotonic increasing trend — all at CF1 confidence (100%, vdr_computation) because it's exact integer arithmetic on the parsed data.
+
+The growth rate claim (0.12 = 12%) can be mechanically verified: (171000 - 142000) / 142000 = 29000/142000. In Q16: `v=13396, r0=...`. That's approximately 0.204 or 20.4% for July-to-September. The stated 0.12 might refer to a different baseline. The system flags this — the claimed growth rate doesn't match the computed quarter-internal growth. The LLM can address this discrepancy in the report.
+
+The two unresolved references are explicitly flagged. The LLM will note in the report that the full breakdown was referenced in an unavailable spreadsheet attachment, and that Janet's email about widget_b supply chain issues was referenced but not accessible.
+
+The LLM generates the report against five domain GEMM caches, with pre-computed analytics, detected discrepancies, and flagged gaps — all as structured UUID facts. It's assembling and framing, not analyzing. The analysis already happened mechanically.
+
+---
+
