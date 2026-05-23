@@ -17,7 +17,7 @@ PR11|SIMD and scalar bit-identical|AVX2 and scalar produce identical bytes|IN11
 PR12|model weights are i16|2 bytes v + 2 bytes r0 + 2 bytes r1 = 8 bytes per param|DT14
 PR13|system scalability via per-core isolation|adding cores adds sessions linearly|CM1
 PR14|FSM and scoring are KB data structures|FSM lives in KB like LRU/queue — not a type of KB; behavior set likewise|DT19,DT26
-PR15|LLM predicts UUIDs not text|forward pass selects next i64 from 8192 structural addresses — indifferent to semantic meaning|LI1-LI4
+PR15|LLM predicts UUIDs not text|forward pass selects next i64 from N structural addresses — indifferent to semantic meaning|LI1-LI4
 PR16|unresolved tokens never silently dropped|every input token either resolved, corrected, or flagged as unresolved with text preserved|IN39
 PR17|security is structural not behavioral|grant system prevents execution regardless of LLM prediction — no instruction-based safety|LI2
 PR18|structural VdrId encodes tree position|bits encode path — navigation by extraction, membership by mask|SU1-SU5
@@ -101,7 +101,7 @@ KT4|root.system.confidence|+4|11-entry confidence table|yes
 KT5|root.system.builtins|+5|448 IOSE declarations, 24 categories|yes
 KT6|root.system.command_vocab|+6|~300 command tokens|yes
 KT7|root.system.hygiene|+7|~50 self-maintenance rules|yes
-KT8|root.system.embedding|+8|vocab embedding 8192×2048|yes
+KT8|root.system.embedding|+8|vocab embedding N×2048|yes
 KT9|root.system.output|+9|lm_head + final norm|yes
 KT10|root.system.relation_types|+13|system frozen + domain appendable|no
 KT11|root.system.ingestion|+14|queue + CompactionProfiles|no
@@ -163,7 +163,7 @@ MD2|n_layers|6|from 16
 MD3|n_heads|12|from 16
 MD4|d_head|170|from 128
 MD5|mlp_dim|2048|from 5632
-MD6|vocab_size|8192|structural UUIDs, not text tokens
+MD6|vocab_size|N|structural UUIDs, not text tokens
 MD7|total_params|~143M|85.7% reduction
 MD8|weight_memory|~286 MB v, ~572 MB total|i16
 MD9|per_token_MACs|~126M|~5.3ms at AVX2
@@ -267,7 +267,7 @@ PP6|disambiguation (stage 4)|typed relation co-occurrence narrows multiple candi
 PP7|assertion to prompt_current (stage 5)|resolved tokens→reference facts, structural annotations, GEMM scope markers, unresolved→flagged text, original raw text preserved|nothing silently dropped
 
 # llm_identity(id|concept|description|significance)
-LI1|UUID predictor|LLM predicts next i64 from vocabulary of 8192 structural addresses — not text generation|embedding maps i64 to vector, attention predicts next i64, softmax selects
+LI1|UUID predictor|LLM predicts next i64 from vocabulary of N structural addresses — not text generation|embedding maps i64 to vector, attention predicts next i64, softmax selects
 LI2|security structural|grant system prevents execution regardless of LLM prediction — LLM can predict op_execute with max probability, without grant it returns denied + audit log|no instruction-based safety needed
 LI3|scratchpad as UUID sequence|cross-turn notes stored as VdrId reference facts — 4 VdrId facts (32 bytes) encode context that would consume thousands of text tokens|pre-resolution follows addresses, checks KB modification timestamps
 LI4|computational identity|VDR-Prolog is UUID matching and execution engine — correction is retract+assert, not conversation; no ceremony because ceremony is not a KB operation|every output token traces to UUID → fact → provenance source
@@ -281,7 +281,7 @@ CC5|token reduction|with pre-derivation: ~30-45 UUIDs instead of ~85-120 for typ
 
 # error_model(id|concept|description|notes)
 EM1|CLLM failure|flat softmax + float rounding → any token can win → hallucinated functions, malformed syntax, fabricated facts|error indistinguishable from correct output
-EM2|VDR failure|flat softmax across 8192 UUIDs — every possible output is valid UUID pointing to real entity|cannot hallucinate nonexistent function (no UUID for it); cannot malform syntax (grammar templates handle formatting)
+EM2|VDR failure|flat softmax across N UUIDs — every possible output is valid UUID pointing to real entity|cannot hallucinate nonexistent function (no UUID for it); cannot malform syntax (grammar templates handle formatting)
 EM3|failure mode|selecting wrong UUID — os.listdir when pathlib.Path.iterdir better — both real, both work|suboptimal choice, not fabrication
 EM4|detection|low-confidence: check typed relation coherence with preceding UUIDs, compare top-N against causal chain, defer if no candidate connects well|ambiguity presented to user, not silently resolved
 EM5|error floor|worst output = real entity chosen for wrong reasons — detectable (provenance doesn't support), recoverable (retract+re-derive), bounded (entity exists with known properties)|vs CLLM: worst output = arbitrarily convincing fabrication
