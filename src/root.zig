@@ -2,6 +2,8 @@ const std = @import("std");
 const config_mod = @import("vdr_config");
 const types = @import("vdr_types");
 
+const arena_mod = @import("vdr_arena.zig");
+
 pub fn main() void {
     std.debug.print("VDR-Prolog kernel starting\n", .{});
 
@@ -56,6 +58,21 @@ pub fn main() void {
     std.debug.print("  prolog.max_results:             {}\n", .{cfg.prolog.max_results});
     std.debug.print("  prolog.max_inheritance_depth:   {}\n", .{cfg.prolog.max_inheritance_depth});
 
+    // Create global arena (PR4: arena-only memory, AM1: global arena)
+    const global_arena = arena_mod.create(@intCast(cfg.global_arena_bytes)) orelse {
+        std.debug.print("fatal: cannot allocate global arena ({} bytes)\n", .{cfg.global_arena_bytes});
+        std.process.exit(1);
+    };
+
+    std.debug.print("=== Global Arena ===\n", .{});
+    std.debug.print("  size:  {} bytes\n", .{global_arena.size});
+    std.debug.print("  used:  {} bytes\n", .{global_arena.usedBytes()});
+    std.debug.print("  free:  {} bytes\n", .{global_arena.freeBytes()});
+
     std.debug.print("=== config loaded OK ===\n", .{});
     std.debug.print("VDR-Prolog kernel ready\n", .{});
+
+    // Cleanup
+    arena_mod.destroy(global_arena);
+    std.debug.print("VDR-Prolog kernel shutdown\n", .{});
 }
