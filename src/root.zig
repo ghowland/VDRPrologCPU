@@ -7,6 +7,8 @@ const resetable_memory = @import("resetable_memory.zig");
 
 const vdr_http = @import("vdr_http.zig");
 
+const compact_loader = @import("vdr_compact_loader.zig");
+
 // Types
 const Text = @import("text_big.zig").Text;
 
@@ -91,14 +93,10 @@ pub fn main() void {
     std.debug.print("=== config loaded OK ===\n", .{});
     std.debug.print("VDR-Prolog kernel ready\n", .{});
 
-    // // Test test
-    // const text = Text.init("Testing 123\n");
-    // std.debug.print("Text test: {s}\n", .{text.toText()});
-    // resetable_memory.reset();
-    // const text2 = Text.init("Testing 987\n");
-    // std.debug.print("Text test 2: {s}\n", .{text2.toText()});
-
     std.debug.print("VDR-Prolog kernel ready\n", .{});
+
+    // Load KB Test
+    test_load(global_arena);
 
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);
@@ -116,4 +114,48 @@ pub fn main() void {
     resetable_memory.destroy();
     vdr_arena.destroy(global_arena);
     std.debug.print("VDR-Prolog kernel shutdown\n", .{});
+}
+
+fn test_load(global_arena: *types.Arena) void {
+    std.debug.print("\n=== Loading compact files ===\n", .{});
+
+    const test_files = [_][]const u8{
+        "data/kb_raw/english_vocabulary.md",
+        "data/kb_raw/mathematics_foundation.md",
+        "data/kb_raw/physics.md",
+        "data/kb_raw/biology.md",
+        "data/kb_raw/programming_zig.md",
+        "data/kb_raw/history_human.md",
+        "data/kb_raw/philosophy_ancient.md",
+        "data/kb_raw/cooking_basic.md",
+    };
+
+    var total_tables: usize = 0;
+    var total_rows: usize = 0;
+    var total_rels: usize = 0;
+    var total_bytes: usize = 0;
+    var files_loaded: usize = 0;
+
+    for (test_files) |path| {
+        if (compact_loader.loadCompactFile(global_arena, path)) |result| {
+            compact_loader.printLoadStats(result);
+            compact_loader.printSampleRows(result, global_arena, 3, 2);
+            total_tables += result.table_count;
+            total_rows += result.total_rows;
+            total_rels += result.relationship_count;
+            total_bytes += result.file_bytes;
+            files_loaded += 1;
+        } else {
+            std.debug.print("compact_loader: FAILED to load '{s}'\n", .{path});
+        }
+    }
+
+    std.debug.print("\n=== Compact Loading Summary ===\n", .{});
+    std.debug.print("  files loaded:     {}\n", .{files_loaded});
+    std.debug.print("  total tables:     {}\n", .{total_tables});
+    std.debug.print("  total rows:       {}\n", .{total_rows});
+    std.debug.print("  total relations:  {}\n", .{total_rels});
+    std.debug.print("  total file bytes: {}\n", .{total_bytes});
+    std.debug.print("  arena used:       {} bytes\n", .{global_arena.usedBytes()});
+    std.debug.print("  arena free:       {} bytes\n", .{global_arena.freeBytes()});
 }
