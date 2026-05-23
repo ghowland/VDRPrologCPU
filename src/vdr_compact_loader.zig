@@ -221,6 +221,12 @@ pub fn loadCompactFile(arena: *Arena, path: []const u8) ?*LoadResult {
                 in_decode_legend = false;
                 const tname = std.mem.trim(u8, htext[0..paren_open.?], " ");
                 const cols_text = htext[paren_open.? + 1 .. paren_close.?];
+                // Real table headers have pipe-separated columns.
+                // Comment lines like "# — Function words (determiners, pronouns)"
+                // have parens but no pipes inside them — skip those.
+                if (cols_text.len > 0 and std.mem.indexOfScalar(u8, cols_text, '|') == null) {
+                    continue;
+                }
 
                 // Check special sections
                 if (std.mem.eql(u8, tname, "relationships")) {
