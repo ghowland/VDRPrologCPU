@@ -4,7 +4,7 @@ const posix = std.posix;
 const resetable_memory = @import("resetable_memory.zig");
 const handler = @import("vdr_http_handler.zig");
 const accepter = @import("vdr_http_accepter.zig");
-const Text = @import("text.zig").Text;
+const TextBig = @import("text_big.zig").TextBig;
 
 const READ_BUFFER_SIZE: usize = 8192;
 const MAX_HEADER_BYTES: usize = 1024 * 64;
@@ -130,7 +130,7 @@ pub fn handle_connection(conn: net.Server.Connection) !void {
     }
 
     // Read body — POST requires Content-Length, GET body is optional
-    var body = Text.initEmpty();
+    var body = TextBig.initEmpty();
     body.appendRaw(initial_body_bytes);
 
     const content_length = parse_content_length(header_block);

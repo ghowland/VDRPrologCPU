@@ -1,5 +1,5 @@
 const std = @import("std");
-const Text = @import("text.zig").Text;
+const TextBig = @import("text_big.zig").TextBig;
 
 const vdr_http = @import("vdr_http.zig");
 
@@ -7,11 +7,11 @@ pub const HandlerResult = struct {
     status_code: u16 = 200,
     status_text: []const u8 = "OK",
     content_type: []const u8 = "application/json",
-    body: Text = Text.initEmpty(),
+    body: TextBig = TextBig.initEmpty(),
 };
 
 /// Echo handler: wraps input body in {"echo":"..."} JSON response.
-pub fn handle(method: []const u8, path: []const u8, body: *const Text) HandlerResult {
+pub fn handle(method: []const u8, path: []const u8, body: *const TextBig) HandlerResult {
     _ = method;
 
     if (std.mem.eql(u8, path, "/shutdown")) {
@@ -23,11 +23,11 @@ pub fn handle(method: []const u8, path: []const u8, body: *const Text) HandlerRe
             .status_text = "Not Found",
             .content_type = "text/plain",
         };
-        result.body = Text.init("unknown route");
+        result.body = TextBig.init("unknown route");
         return result;
     }
 
-    var output = Text.initEmpty();
+    var output = TextBig.initEmpty();
     output.appendRaw("{\"echo\":\"");
 
     // Escape the body into the output

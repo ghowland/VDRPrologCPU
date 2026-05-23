@@ -8,7 +8,7 @@ const resetable_memory = @import("resetable_memory.zig");
 const vdr_http = @import("vdr_http.zig");
 
 // Types
-const Text = @import("text.zig").Text;
+const Text = @import("text_big.zig").Text;
 
 pub fn main() void {
     std.debug.print("VDR-Prolog kernel starting\n", .{});

@@ -6,77 +6,77 @@ pub const TEXT_LEN_MAX = 1024 * 100; // 50KB text
 pub const TEXT_LEN_OVERSIZE = TEXT_LEN_MAX + 1;
 pub const TEXT_LEN_UNDERSIZE = TEXT_LEN_MAX - 1;
 
-pub const Text = struct {
+pub const TextBig = struct {
     text: [TEXT_LEN_MAX]u8 = [_]u8{0} ** TEXT_LEN_MAX,
     len: usize = 0,
 
-    var static_cpath_buffer: [TEXT_LEN_OVERSIZE]u8 = undefined; // Lazily allocated by using .toCPath(), after that call .deinit() and the memory is freed.  The normal Text data is unaffected by any of this
+    var static_cpath_buffer: [TEXT_LEN_OVERSIZE]u8 = undefined; // Lazily allocated by using .toCPath(), after that call .deinit() and the memory is freed.  The normal TextBig data is unaffected by any of this
 
-    pub fn init(input: []const u8) Text {
-        var s = Text{};
+    pub fn init(input: []const u8) TextBig {
+        var s = TextBig{};
         s.appendRaw(input);
         return s;
     }
 
-    pub fn initEmpty() Text {
-        return Text.init("");
+    pub fn initEmpty() TextBig {
+        return TextBig.init("");
     }
 
-    pub fn initFormat(allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !Text {
+    pub fn initFormat(allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !TextBig {
         _ = allocator;
 
         const written = try std.fmt.allocPrint(resetable_memory.frameMem.allocator, fmt, args);
 
-        return Text.init(written);
+        return TextBig.init(written);
     }
 
-    pub fn formatFrame(comptime fmt: []const u8, args: anytype) !Text {
+    pub fn formatFrame(comptime fmt: []const u8, args: anytype) !TextBig {
         const written = try std.fmt.allocPrint(resetable_memory.frameMem.allocator, fmt, args);
 
-        return Text.init(written);
+        return TextBig.init(written);
     }
 
-    pub fn initFormatAlloc(allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !Text {
+    pub fn initFormatAlloc(allocator: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !TextBig {
         _ = allocator;
         const written = try std.fmt.allocPrint(resetable_memory.frameMem.allocator, fmt, args);
 
-        return Text.init(written);
+        return TextBig.init(written);
     }
 
-    pub fn initMaybe(text: ?Text) Text {
+    pub fn initMaybe(text: ?TextBig) TextBig {
         if (text == null) {
-            return Text.init("");
+            return TextBig.init("");
         }
 
         return text.?;
     }
 
-    pub fn initMaybeRaw(text: ?[]const u8) ?Text {
+    pub fn initMaybeRaw(text: ?[]const u8) ?TextBig {
         if (text == null) {
             return null;
         }
 
-        return Text.init(text.?);
+        return TextBig.init(text.?);
     }
 
     // Write clean JSON without padded zeros
-    pub fn jsonStringify(self: Text, writer: anytype) !void {
+    pub fn jsonStringify(self: TextBig, writer: anytype) !void {
         try writer.write(self.text[0..self.len]);
     }
 
-    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Text {
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !TextBig {
         _ = allocator;
         _ = options;
 
         const token = try source.next();
         switch (token) {
-            .string => |s| return Text.init(s),
-            .allocated_string => |s| return Text.init(s),
-            .null => return Text.initEmpty(),
+            .string => |s| return TextBig.init(s),
+            .allocated_string => |s| return TextBig.init(s),
+            .null => return TextBig.initEmpty(),
 
             // Handle partial strings by accumulating all fragments
             .partial_string, .partial_string_escaped_1, .partial_string_escaped_2, .partial_string_escaped_3, .partial_string_escaped_4 => {
-                var result = Text.initEmpty();
+                var result = TextBig.initEmpty();
                 var current_token = token;
 
                 // Process all string fragments until we get the final piece
@@ -91,7 +91,7 @@ pub const Text = struct {
                             // Final piece - append and return
                             const new_len = result.len + s.len;
                             if (new_len > result.text.len) {
-                                std.debug.print("Text overflow: total length {} exceeds buffer {}\n", .{ new_len, result.text.len });
+                                std.debug.print("TextBig overflow: total length {} exceeds buffer {}\n", .{ new_len, result.text.len });
                                 return error.UnexpectedToken;
                             }
                             @memcpy(result.text[result.len..new_len], s);
@@ -102,7 +102,7 @@ pub const Text = struct {
                             // Final piece (allocated) - append and return
                             const new_len = result.len + s.len;
                             if (new_len > result.text.len) {
-                                std.debug.print("Text overflow: total length {} exceeds buffer {}\n", .{ new_len, result.text.len });
+                                std.debug.print("TextBig overflow: total length {} exceeds buffer {}\n", .{ new_len, result.text.len });
                                 return error.UnexpectedToken;
                             }
                             @memcpy(result.text[result.len..new_len], s);
@@ -118,7 +118,7 @@ pub const Text = struct {
                     // Append current fragment
                     const new_len = result.len + bytes.len;
                     if (new_len > result.text.len) {
-                        std.debug.print("Text overflow: total length {} exceeds buffer {}\n", .{ new_len, result.text.len });
+                        std.debug.print("TextBig overflow: total length {} exceeds buffer {}\n", .{ new_len, result.text.len });
                         return error.UnexpectedToken;
                     }
                     @memcpy(result.text[result.len..new_len], bytes);
@@ -130,14 +130,14 @@ pub const Text = struct {
             },
 
             else => {
-                std.debug.print("Text.jsonParse unexpected token: {any}\n", .{token});
+                std.debug.print("TextBig.jsonParse unexpected token: {any}\n", .{token});
                 return error.UnexpectedToken;
             },
         }
     }
 
     pub fn format(
-        self: Text,
+        self: TextBig,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
         writer: anytype,
@@ -148,14 +148,14 @@ pub const Text = struct {
     }
 
     // Same as toSlice
-    pub fn toText(self: *const Text) []const u8 {
+    pub fn toText(self: *const TextBig) []const u8 {
         return self.text[0..self.len];
     }
 
     // toText, but allocated new memory which must be freed by someone else
-    pub fn toTextAlloc(self: *const Text, allocatorRemote: std.mem.Allocator) []const u8 {
+    pub fn toTextAlloc(self: *const TextBig, allocatorRemote: std.mem.Allocator) []const u8 {
         const bytes = allocatorRemote.alloc(u8, self.len) catch |err| {
-            std.debug.print("Text Allocation Error: {any}\n", .{err});
+            std.debug.print("TextBig Allocation Error: {any}\n", .{err});
             std.debug.print("   From: {s}\n", .{self.toText()});
             return "";
         };
@@ -165,19 +165,19 @@ pub const Text = struct {
     }
 
     // Same as toText
-    pub fn toSlice(self: *const Text) []const u8 {
+    pub fn toSlice(self: *const TextBig) []const u8 {
         return self.text[0..self.len];
     }
 
-    pub fn isEmpty(self: Text) bool {
+    pub fn isEmpty(self: TextBig) bool {
         return self.len == 0;
     }
 
-    pub fn appendText(self: *Text, input: Text) void {
+    pub fn appendTextBig(self: *TextBig, input: TextBig) void {
         const space = self.text.len - self.len;
         const to_copy = @min(input.len, space);
 
-        // std.debug.print("Append Text Start: {s}  Len: {d}   Text: {s}  TLen: {d}  Space: {d}  ToCopy: {d}\n", .{ self.toText(), self.len, input.toText(), input.len, space, to_copy });
+        // std.debug.print("Append TextBig Start: {s}  Len: {d}   TextBig: {s}  TLen: {d}  Space: {d}  ToCopy: {d}\n", .{ self.toText(), self.len, input.toText(), input.len, space, to_copy });
 
         // Copy only what fits
         @memcpy(self.text[self.len .. self.len + to_copy], input.text[0..to_copy]);
@@ -185,14 +185,14 @@ pub const Text = struct {
 
         // Zero out remaining unused buffer
         @memset(self.text[self.len..], 0);
-        // std.debug.print("Append Text End: {s}  Len: {d}\n", .{ self.toText(), self.len });
+        // std.debug.print("Append TextBig End: {s}  Len: {d}\n", .{ self.toText(), self.len });
     }
 
-    // pub fn appendRaw(self: *Text, input: []const u8) void {
+    // pub fn appendRaw(self: *TextBig, input: []const u8) void {
     //     const space = self.text.len - self.len;
     //     const to_copy = @min(input.len, space);
 
-    //     // std.debug.print("Append Raw Start: {s}  Len: {d}   Text: {s}  TLen: {d}  Space: {d}  ToCopy: {d}\n", .{ self.toText(), self.len, input, input.len, space, to_copy });
+    //     // std.debug.print("Append Raw Start: {s}  Len: {d}   TextBig: {s}  TLen: {d}  Space: {d}  ToCopy: {d}\n", .{ self.toText(), self.len, input, input.len, space, to_copy });
 
     //     // Copy only what fits
     //     @memcpy(self.text[self.len .. self.len + to_copy], input[0..to_copy]);
@@ -203,7 +203,7 @@ pub const Text = struct {
     //     // std.debug.print("Append Raw End: {s}  Len: {d}\n", .{ self.toText(), self.len });
     // }
 
-    pub fn appendRaw(self: *Text, input: []const u8) void {
+    pub fn appendRaw(self: *TextBig, input: []const u8) void {
         // Simple byte-by-byte copy (correct for UTF-8)
         const available_space = self.text.len - self.len - 1; // -1 for null terminator
         const copy_len = @min(input.len, available_space);
@@ -212,7 +212,7 @@ pub const Text = struct {
         self.len += copy_len;
     }
 
-    pub fn appendRawAlloc(self: *Text, allocator: std.mem.Allocator, input: []const u8) void {
+    pub fn appendRawAlloc(self: *TextBig, allocator: std.mem.Allocator, input: []const u8) void {
         _ = allocator;
 
         // Create a temporary copy to avoid aliasing
@@ -233,137 +233,137 @@ pub const Text = struct {
         self.len += copy_len;
     }
 
-    pub fn concat(self: *Text, other: []const u8) void {
+    pub fn concat(self: *TextBig, other: []const u8) void {
         self.append(other);
     }
 
-    pub fn trim(self: *Text) void {
+    pub fn trim(self: *TextBig) void {
         self.trimStart();
         self.trimEnd();
     }
 
-    pub fn trimStart(self: *Text) void {
+    pub fn trimStart(self: *TextBig) void {
         const trimmed = std.mem.trimLeft(u8, self.toSlice(), " \t\n\r");
         const new_len = trimmed.len;
         std.mem.copyForwards(u8, &self.text, trimmed);
         self.len = new_len;
     }
 
-    pub fn trimEnd(self: *Text) void {
+    pub fn trimEnd(self: *TextBig) void {
         const trimmed = std.mem.trimRight(u8, self.toSlice(), " \t\n\r");
         self.len = trimmed.len;
     }
 
-    pub fn equals(a: Text, b: Text) bool {
+    pub fn equals(a: TextBig, b: TextBig) bool {
         return std.mem.eql(u8, a.toSlice(), b.toSlice());
     }
 
-    pub fn equalsRaw(a: Text, b: []const u8) bool {
+    pub fn equalsRaw(a: TextBig, b: []const u8) bool {
         return std.mem.eql(u8, a.toSlice(), b);
     }
 
-    pub fn toInt(self: Text) ?i32 {
+    pub fn toInt(self: TextBig) ?i32 {
         return std.fmt.parseInt(i32, self.toSlice(), 10) catch null;
     }
 
-    pub fn toUsize(self: Text) ?usize {
+    pub fn toUsize(self: TextBig) ?usize {
         return std.fmt.parseInt(usize, self.toSlice(), 10) catch null;
     }
 
-    pub fn toU32(self: Text) ?u32 {
+    pub fn toU32(self: TextBig) ?u32 {
         return std.fmt.parseInt(u32, self.toSlice(), 10) catch null;
     }
 
-    pub fn toU16(self: Text) ?u16 {
+    pub fn toU16(self: TextBig) ?u16 {
         return std.fmt.parseInt(u16, self.toSlice(), 10) catch null;
     }
 
-    pub fn toU8(self: Text) ?u8 {
+    pub fn toU8(self: TextBig) ?u8 {
         return std.fmt.parseInt(u8, self.toSlice(), 10) catch null;
     }
 
-    pub fn toIndex(self: Text) ?usize {
+    pub fn toIndex(self: TextBig) ?usize {
         return std.fmt.parseInt(usize, self.toSlice(), 10) catch null;
     }
 
-    pub fn toFloat(self: Text) ?f32 {
+    pub fn toFloat(self: TextBig) ?f32 {
         return std.fmt.parseFloat(f32, self.toSlice()) catch null;
     }
 
-    pub fn toBool(self: Text) bool {
+    pub fn toBool(self: TextBig) bool {
         if (self.equalsRaw("true")) return true;
         return false;
     }
 
-    pub fn fromInt(allocator: std.mem.Allocator, value: i32) !Text {
+    pub fn fromInt(allocator: std.mem.Allocator, value: i32) !TextBig {
         _ = allocator;
-        return try Text.initFormat(resetable_memory.frameMem.allocator, "{}", .{value});
+        return try TextBig.initFormat(resetable_memory.frameMem.allocator, "{}", .{value});
     }
 
-    pub fn fromFloat(allocator: std.mem.Allocator, value: f32) !Text {
+    pub fn fromFloat(allocator: std.mem.Allocator, value: f32) !TextBig {
         _ = allocator;
-        return try Text.initFormat(resetable_memory.frameMem.allocator, "{}", .{value});
+        return try TextBig.initFormat(resetable_memory.frameMem.allocator, "{}", .{value});
     }
 
-    pub fn fromBool(allocator: std.mem.Allocator, value: bool) !Text {
+    pub fn fromBool(allocator: std.mem.Allocator, value: bool) !TextBig {
         _ = allocator;
-        return try Text.initFormat(resetable_memory.frameMem.allocator, "{any}", .{value});
+        return try TextBig.initFormat(resetable_memory.frameMem.allocator, "{any}", .{value});
     }
 
-    pub fn toZeroString(self: *Text) [*c]u8 {
+    pub fn toZeroString(self: *TextBig) [*c]u8 {
         self.text[self.len] = 0;
         return @ptrCast(&self.text);
     }
 
-    pub fn startsWith(self: Text, prefix: []const u8) bool {
+    pub fn startsWith(self: TextBig, prefix: []const u8) bool {
         return std.mem.startsWith(u8, self.toSlice(), prefix);
     }
 
-    pub fn endsWith(self: Text, suffix: []const u8) bool {
+    pub fn endsWith(self: TextBig, suffix: []const u8) bool {
         return std.mem.endsWith(u8, self.toSlice(), suffix);
     }
 
-    pub fn contains(self: Text, sub: []const u8) bool {
+    pub fn contains(self: TextBig, sub: []const u8) bool {
         return std.mem.indexOf(u8, self.toSlice(), sub) != null;
     }
 
-    pub fn containsText(self: Text, sub: Text) bool {
+    pub fn containsTextBig(self: TextBig, sub: TextBig) bool {
         return self.contains(sub.toText());
     }
 
-    pub fn indexOf(self: Text, sub: []const u8) ?usize {
+    pub fn indexOf(self: TextBig, sub: []const u8) ?usize {
         return std.mem.indexOf(u8, self.toSlice(), sub);
     }
 
-    pub fn clear(self: *Text) void {
+    pub fn clear(self: *TextBig) void {
         self.len = 0;
     }
 
-    pub fn toUppercase(self: *Text) void {
+    pub fn toUppercase(self: *TextBig) void {
         for (self.text[0..self.len]) |*c| {
             c.* = std.ascii.toUpper(c.*);
         }
     }
 
-    pub fn toLowercase(self: *Text) void {
+    pub fn toLowercase(self: *TextBig) void {
         for (self.text[0..self.len]) |*c| {
             c.* = std.ascii.toLower(c.*);
         }
     }
 
-    pub fn secureWipe(self: *Text) void {
+    pub fn secureWipe(self: *TextBig) void {
         @memset(&self.text, 0);
         self.len = 0;
     }
 
-    pub fn shorten(self: Text, maxLen: i32) Text {
+    pub fn shorten(self: TextBig, maxLen: i32) TextBig {
         if (self.len < maxLen) return self;
 
-        const text = Text.init(self.text[0..@intCast(maxLen)]);
+        const text = TextBig.init(self.text[0..@intCast(maxLen)]);
         return text;
     }
 
-    pub fn replace(self: *Text, needle: []const u8, replacement: []const u8) void {
+    pub fn replace(self: *TextBig, needle: []const u8, replacement: []const u8) void {
         var result: [TEXT_LEN_MAX]u8 = [_]u8{0} ** TEXT_LEN_MAX;
         var result_len: usize = 0;
 
@@ -392,21 +392,21 @@ pub const Text = struct {
         @memset(self.text[self.len..], 0);
     }
 
-    pub fn split(self: Text, delimiter: u8) ![]Text {
-        var list = std.array_list.Managed(Text).init(resetable_memory.frameMem.allocator); // Dont free this memory here, we hand off with toOwnedSlice
+    pub fn split(self: TextBig, delimiter: u8) ![]TextBig {
+        var list = std.array_list.Managed(TextBig).init(resetable_memory.frameMem.allocator); // Dont free this memory here, we hand off with toOwnedSlice
 
         var slice1 = self.toSlice();
         var start: usize = 0;
 
         for (slice1, 0..) |c, i| {
             if (c == delimiter) {
-                try list.append(Text.init(slice1[start..i]));
+                try list.append(TextBig.init(slice1[start..i]));
                 start = i + 1;
             }
         }
 
         if (start <= slice1.len) {
-            try list.append(Text.init(slice1[start..]));
+            try list.append(TextBig.init(slice1[start..]));
         }
 
         // Return the owned items, which are useable for this and next frame
@@ -414,7 +414,7 @@ pub const Text = struct {
         // return list.toOwnedSlice();
     }
 
-    pub fn slice(self: Text, start: usize, end: usize) []const u8 {
+    pub fn slice(self: TextBig, start: usize, end: usize) []const u8 {
         var endF = end;
         var startF = start;
 
@@ -424,19 +424,19 @@ pub const Text = struct {
         return self.text[startF..endF];
     }
 
-    pub fn sliceText(self: Text, start: usize, end: usize) Text {
+    pub fn sliceTextBig(self: TextBig, start: usize, end: usize) TextBig {
         var endF = end;
         var startF = start;
 
         if (end > self.len) endF = self.len;
         if (start > end) startF = end;
 
-        const out = Text.init(self.text[startF..endF]);
+        const out = TextBig.init(self.text[startF..endF]);
         return out;
     }
 
-    pub fn joinRaw(parts: [][]const u8, delimiter: []const u8) Text {
-        var result = Text.initEmpty();
+    pub fn joinRaw(parts: [][]const u8, delimiter: []const u8) TextBig {
+        var result = TextBig.initEmpty();
         for (parts, 0..) |part, i| {
             const clean_part = if (part.len > 0 and part[part.len - 1] == 0)
                 part[0 .. part.len - 1]
@@ -450,7 +450,7 @@ pub const Text = struct {
         return result;
     }
 
-    pub fn join(parts: []Text, delimiter: []const u8) !Text {
+    pub fn join(parts: []TextBig, delimiter: []const u8) !TextBig {
         var items = std.array_list.Managed([]const u8).init(resetable_memory.frameMem.allocator);
         defer items.deinit();
 
@@ -463,7 +463,7 @@ pub const Text = struct {
         return joinRaw(owned_slice, delimiter);
     }
 
-    pub fn toCStringOld(self: Text) [*c]u8 {
+    pub fn toCStringOld(self: TextBig) [*c]u8 {
         var text = self;
 
         // Only NUL-terminate if there’s space:
@@ -473,11 +473,11 @@ pub const Text = struct {
         return @ptrCast(text.text[0..].ptr);
     }
 
-    pub fn toCString(self: Text) [:0]const u8 {
+    pub fn toCString(self: TextBig) [:0]const u8 {
         return self.toCPath();
     }
 
-    pub fn toCPath(self: Text) [:0]const u8 {
+    pub fn toCPath(self: TextBig) [:0]const u8 {
         const copy_len = @min(self.len, static_cpath_buffer.len - 1);
 
         @memcpy(static_cpath_buffer[0..copy_len], self.text[0..copy_len]);
@@ -486,7 +486,7 @@ pub const Text = struct {
         return static_cpath_buffer[0..copy_len :0];
     }
 
-    pub fn deleteAt(self: *Text, byte_index: usize, count: usize) void {
+    pub fn deleteAt(self: *TextBig, byte_index: usize, count: usize) void {
         if (byte_index >= self.len) return; // Nothing to delete
 
         const actual_count = @min(count, self.len - byte_index);
@@ -507,7 +507,7 @@ pub const Text = struct {
         @memset(self.text[self.len..], 0);
     }
 
-    pub fn insertAt(self: *Text, byte_index: usize, input: Text) void {
+    pub fn insertAt(self: *TextBig, byte_index: usize, input: TextBig) void {
         const insert_pos = @min(byte_index, self.len);
         const available_space = self.text.len - self.len;
         const insert_len = @min(input.len, available_space);
@@ -532,12 +532,12 @@ pub const Text = struct {
         self.len += insert_len;
     }
 
-    pub fn insertAtRaw(self: *Text, byte_index: usize, input: []const u8) void {
-        const input_text = Text.init(input);
+    pub fn insertAtRaw(self: *TextBig, byte_index: usize, input: []const u8) void {
+        const input_text = TextBig.init(input);
         self.insertAt(byte_index, input_text);
     }
 
-    pub fn lastIndexOf(self: Text, sub: []const u8) ?usize {
+    pub fn lastIndexOf(self: TextBig, sub: []const u8) ?usize {
         if (sub.len == 0 or sub.len > self.len) return null;
 
         // Start from the last possible position where substring could fit
@@ -562,7 +562,7 @@ pub const Text = struct {
         return null;
     }
 
-    pub fn extractZigTypeName(input: Text) Text {
+    pub fn extractZigTypeName(input: TextBig) TextBig {
         // Find where the alphabetic characters start
         var alpha_start: usize = 0;
         for (input.text[0..input.len], 0..) |c, i| {
@@ -578,10 +578,10 @@ pub const Text = struct {
         }
 
         // Build result starting with non-alpha prefix
-        var result = Text.init(input.slice(0, alpha_start));
+        var result = TextBig.init(input.slice(0, alpha_start));
 
         // Find the last dot in the alphabetic portion
-        const alpha_portion = Text.init(input.slice(alpha_start, input.len));
+        const alpha_portion = TextBig.init(input.slice(alpha_start, input.len));
         const last_dot = alpha_portion.lastIndexOf(".");
 
         if (last_dot) |dot_pos| {
@@ -596,7 +596,7 @@ pub const Text = struct {
         return result;
     }
 
-    pub fn checksum(self: Text, force_negative: bool) i32 {
+    pub fn checksum(self: TextBig, force_negative: bool) i32 {
         var hasher = std.crypto.hash.Sha1.init(.{});
         hasher.update(self.text[0..self.len]);
         var hash: [20]u8 = undefined;
@@ -612,16 +612,16 @@ pub const Text = struct {
         return result;
     }
 
-    pub fn removeLastSplitItem(self: Text, delimiter: []const u8) !Text {
+    pub fn removeLastSplitItem(self: TextBig, delimiter: []const u8) !TextBig {
         const parts = try self.split(delimiter[0]);
         if (parts.len > 1) {
             return try join(parts[0 .. parts.len - 1], delimiter);
         } else {
-            return Text.initEmpty();
+            return TextBig.initEmpty();
         }
     }
 
-    pub fn getGetLastNSplitItem(self: Text, delimiter: u8, indexFromLast: usize) !?Text {
+    pub fn getGetLastNSplitItem(self: TextBig, delimiter: u8, indexFromLast: usize) !?TextBig {
         const parts = try self.split(delimiter);
 
         // If index is trying to reach too deep, it cant
@@ -636,7 +636,7 @@ pub const Text = struct {
         }
     }
 
-    pub fn trimChars(self: Text, chars: []const u8) Text {
+    pub fn trimChars(self: TextBig, chars: []const u8) TextBig {
         if (self.text.len == 0) return self;
 
         var start: usize = 0;
@@ -668,6 +668,6 @@ pub const Text = struct {
             end -= 1;
         }
 
-        return Text.init(self.text[start..end]);
+        return TextBig.init(self.text[start..end]);
     }
 };
