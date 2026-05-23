@@ -12,7 +12,7 @@ const std = @import("std");
 // Positive = global (persistent). Negative = ephemeral (session-local).
 // ============================================================
 
-pub const StructuralId = packed struct(u64) {
+pub const VdrStructuralId = packed struct(u64) {
     item_id: u20 = 0,
     l5: u8 = 255,
     l4: u8 = 255,
@@ -46,11 +46,11 @@ pub const VdrId = struct {
         return a.v == b.v;
     }
 
-    pub fn structural(self: VdrId) StructuralId {
+    pub fn structural(self: VdrId) VdrStructuralId {
         return @bitCast(@as(u64, @bitCast(self.v)));
     }
 
-    pub fn fromStructural(s: StructuralId) VdrId {
+    pub fn fromStructural(s: VdrStructuralId) VdrId {
         return .{ .v = @bitCast(@as(u64, @bitCast(s))) };
     }
 

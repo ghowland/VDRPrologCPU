@@ -122,7 +122,7 @@ pub const LOOKUP_ID_MAX: LookupId = std.math.maxInt(u20);
 
 // ---- Packed Structural ID ----
 
-pub const StructuralId = packed struct(u64) {
+pub const VdrStructuralId = packed struct(u64) {
     item_id: u20 = 0,
     l5: u8 = LEVEL_SENTINEL,
     l4: u8 = LEVEL_SENTINEL,
@@ -162,11 +162,11 @@ pub const VdrId = struct {
         return @bitCast(self.v);
     }
 
-    pub fn structural(self: VdrId) StructuralId {
+    pub fn structural(self: VdrId) VdrStructuralId {
         return @bitCast(self.bits());
     }
 
-    pub fn fromStructural(s: StructuralId) VdrId {
+    pub fn fromStructural(s: VdrStructuralId) VdrId {
         const raw: u64 = @bitCast(s);
         return .{ .v = @bitCast(raw) };
     }
