@@ -476,11 +476,63 @@ pub const KbLookup = struct {
     children: ?std.AutoHashMap(LookupId, i32) = null,
 };
 
-pub const KBData = struct {
+pub const KBDataValue = struct {
     v: Q16 = .{},
-    label: ?TextSmall = null,
-    text: ?TextSmall = null,
-    timestamp: DeepTime = deep_time.UNIX_EPOCH_IN_DEEP_TIME, // From 100B years ago to 450B years in the future, in seconds
+    text: ?TextSmall = null, // If text is not null, then this is text; otherwise is it Q16(v)
+
+    pub fn isText(self: KBDataValue) bool {
+        return self.text != null;
+    }
+
+    pub fn isValue(self: KBDataValue) bool {
+        return self.text == null;
+    }
+};
+
+pub const KBDataDurationScope = enum(i8) {
+    unknown = -1,
+    millisecond = 0,
+    second,
+    minute,
+    hour,
+    day,
+    week,
+    month,
+    year,
+    decade,
+    century,
+    millennium,
+    million_year,
+};
+
+pub const KBData = struct {
+    id: VdrId = .{},
+    v_0: Q16 = .{}, // If this data has numeric values, we put them here
+    v_0_column: i8 = -1, // If not -1, this is the column the value sources from
+    v_1: Q16 = .{},
+    v_1_column: i8 = -1, // If not -1, this is the column the value sources from
+    v_2: Q16 = .{},
+    v_2_column: i8 = -1, // If not -1, this is the column the value sources from
+    v_3: Q16 = .{},
+    v_3_column: i8 = -1, // If not -1, this is the column the value sources from
+    text_column_0: ?KBDataValue = null,
+    text_column_1: ?KBDataValue = null,
+    text_column_2: ?KBDataValue = null,
+    text_column_3: ?KBDataValue = null,
+    text_column_4: ?KBDataValue = null,
+    text_column_5: ?KBDataValue = null,
+    text_column_6: ?KBDataValue = null,
+    text_column_7: ?KBDataValue = null,
+    text_column_8: ?KBDataValue = null,
+    text_column_9: ?KBDataValue = null,
+    text_column_10: ?KBDataValue = null,
+    text_column_11: ?KBDataValue = null,
+    text_column_12: ?KBDataValue = null,
+    text_column_13: ?KBDataValue = null,
+    text_column_14: ?KBDataValue = null,
+    timestamp: ?DeepTime = null, // If there is a timestamp for this data.  ex: deep_time.UNIX_EPOCH_IN_DEEP_TIME, // From 100B years ago to 450B years in the future, in seconds
+    timestamp_duration: ?DeepTime = null, // If given, how long was this on-going since timestamp event.  This covers date range entries
+    timestamp_scope: KBDataDurationScope = KBDataDurationScope.unknown, // Is the duration in "months" or "years" or "seconds" or "decades", this gives a scope of time the duration is tracking
 };
 
 pub const KB = struct {
@@ -493,7 +545,7 @@ pub const KB = struct {
     walk_id: i32 = 0,
 
     // Provenance.source_id the final VdrStructuralId.item_id that is the index to this array
-    data: []KBData = &[_]KBData{},
+    data: []KBData align(64) = &[_]KBData{},
 
     // This is how we lookup any type of data, by KBEntryType
     lookup: KbLookup = KbLookup{},
