@@ -2,6 +2,7 @@ const std = @import("std");
 const TextBig = @import("text_big.zig").TextBig;
 
 const vdr_http = @import("vdr_http.zig");
+const runner_pool = @import("vdr_runner_pool.zig");
 
 pub const HandlerResult = struct {
     status_code: u16 = 200,
@@ -10,14 +11,17 @@ pub const HandlerResult = struct {
     body: TextBig = TextBig.initEmpty(),
 };
 
-/// Echo handler: wraps input body in {"echo":"..."} JSON response.
 pub fn handle(method: []const u8, path: []const u8, body: *const TextBig) HandlerResult {
     _ = method;
 
     if (std.mem.eql(u8, path, "/shutdown")) {
-        // Quit
         vdr_http.shutdown = true;
-    } else if (!std.mem.eql(u8, path, "/run")) {
+        return HandlerResult{
+            .body = TextBig.init("{\"status\":\"shutdown\"}"),
+        };
+    }
+
+    if (!std.mem.eql(u8, path, "/run")) {
         var result = HandlerResult{
             .status_code = 404,
             .status_text = "Not Found",
@@ -27,29 +31,32 @@ pub fn handle(method: []const u8, path: []const u8, body: *const TextBig) Handle
         return result;
     }
 
-    var output = TextBig.initEmpty();
-    output.appendRaw("{\"echo\":\"");
+    // /run — submit to runner
+    const core_id = runner_pool.nextCoreId();
+    const request_id = runner_pool.nextRequestId();
 
-    // Escape the body into the output
-    const input = body.toText();
-    for (input) |c| {
-        switch (c) {
-            '"' => output.appendRaw("\\\""),
-            '\\' => output.appendRaw("\\\\"),
-            '\n' => output.appendRaw("\\n"),
-            '\r' => output.appendRaw("\\r"),
-            '\t' => output.appendRaw("\\t"),
-            else => {
-                if (c >= 0x20) {
-                    output.appendRaw(&[_]u8{c});
-                }
-            },
-        }
+    const req = runner_pool.WorkRequest{
+        .request_id = request_id,
+        .body = body.*,
+    };
+
+    if (!runner_pool.submit(core_id, req)) {
+        var result = HandlerResult{
+            .status_code = 503,
+            .status_text = "Service Unavailable",
+            .content_type = "text/plain",
+        };
+        result.body = TextBig.init("runner queue full");
+        return result;
     }
 
-    output.appendRaw("\"}");
-
-    return HandlerResult{
-        .body = output,
-    };
+    // Spin-wait for response
+    while (true) {
+        if (runner_pool.poll(core_id, request_id)) |response| {
+            return HandlerResult{
+                .body = response.body,
+            };
+        }
+        std.Thread.yield() catch {};
+    }
 }

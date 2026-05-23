@@ -31,7 +31,7 @@ pub fn run(port: u16) void {
     std.debug.print("http: listening on 127.0.0.1:{}\n", .{port});
 
     // Start handler threads via accepter
-    accepter.init(4);
+    accepter.init(4, 4);
 
     while (!shutdown) {
         // Poll before accept so we don't block on shutdown

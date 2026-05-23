@@ -1,6 +1,7 @@
 const std = @import("std");
 const net = std.net;
 const vdr_http = @import("vdr_http.zig");
+const runner_pool = @import("vdr_runner_pool.zig");
 
 const RING_SIZE: usize = 64;
 const MAX_HANDLERS: usize = 16;
@@ -13,10 +14,12 @@ var handler_shutdown: bool = false;
 var handler_threads: [MAX_HANDLERS]?std.Thread = [_]?std.Thread{null} ** MAX_HANDLERS;
 var handler_count: usize = 0;
 
-pub fn init(n_handlers: usize) void {
+pub fn init(n_handlers: usize, n_runners: usize) void {
     handler_shutdown = false;
     head.store(0, .release);
     tail.store(0, .release);
+
+    runner_pool.init(n_runners);
 
     const count = @min(n_handlers, MAX_HANDLERS);
     handler_count = count;
@@ -56,6 +59,8 @@ pub fn stop() void {
         }
     }
 
+    runner_pool.stop();
+
     std.debug.print("accepter: all handler threads joined\n", .{});
 }
 
@@ -67,30 +72,24 @@ fn handlerLoop(id: usize) void {
         const current_head = head.load(.acquire);
 
         if (current_tail == current_head) {
-            // Ring empty — yield
             std.Thread.yield() catch {};
             continue;
         }
 
-        // Try to claim this slot with compare-and-swap
         const next_tail = (current_tail + 1) % RING_SIZE;
         const result = tail.cmpxchgWeak(current_tail, next_tail, .acq_rel, .acquire);
 
         if (result != null) {
-            // Another thread won — loop and try again
             continue;
         }
 
-        // We won the slot — read and clear it
         const conn = ring[current_tail] orelse continue;
         ring[current_tail] = null;
 
-        // Process the connection
         vdr_http.handle_connection(conn) catch |err| {
             std.debug.print("handler[{}]: error: {any}\n", .{ id, err });
         };
 
-        // Close — catch in case socket is already dead
         conn.stream.close();
     }
 
