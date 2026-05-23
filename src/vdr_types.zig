@@ -6,6 +6,9 @@
 // ============================================================
 
 const std = @import("std");
+const TextSmall = @import("text_small.zig").TextSmall;
+const deep_time = @import("time_deep.zig");
+const DeepTime = deep_time.DeepTime;
 
 // ============================================================
 // Fundamental: VDR ID — sign-bit partitioned addressing
@@ -254,24 +257,6 @@ pub const Q335 = struct {
 // KB Types — the data layer
 // ============================================================
 
-pub const FactTag = enum(i32) {
-    value = 0,
-    text = 1,
-    reference = 2,
-    timestamp = 3,
-    enum_tag = 4,
-    boolean = 5,
-    vector = 6,
-    matrix = 7,
-    provenance_tag = 8,
-    rule_ref = 9,
-    grammar_ref = 10,
-    counter = 11,
-    relation = 12,
-    column_schema = 13,
-    empty = 255,
-};
-
 pub const SourceType = enum(i32) {
     vdr_computation = 0,
     prolog_derivation = 1,
@@ -284,40 +269,6 @@ pub const SourceType = enum(i32) {
     web_search = 8,
     llm_generated = 9,
     unknown = 10,
-};
-
-pub const Provenance = struct {
-    source_type: i32 = @intFromEnum(SourceType.unknown),
-    source_kb_id: VdrId = .{},
-    source_slot_id: i32 = -1,
-    confidence: Q16 = .{},
-    timestamp: i32 = 0,
-    derivation_rule_id: i32 = -1,
-    capability_level: i32 = 0, // for per-weight access control
-
-    pub fn direct(source: SourceType, kb_id: VdrId, slot_id: i32, time: i32) Provenance {
-        return .{
-            .source_type = @intFromEnum(source),
-            .source_kb_id = kb_id,
-            .source_slot_id = slot_id,
-            .confidence = confidence_table[@intCast(@intFromEnum(source))],
-            .timestamp = time,
-            .derivation_rule_id = -1,
-            .capability_level = 0,
-        };
-    }
-
-    pub fn derived(rule_id: i32, kb_id: VdrId, slot_id: i32, conf: Q16, time: i32) Provenance {
-        return .{
-            .source_type = @intFromEnum(SourceType.prolog_derivation),
-            .source_kb_id = kb_id,
-            .source_slot_id = slot_id,
-            .confidence = conf,
-            .timestamp = time,
-            .derivation_rule_id = rule_id,
-            .capability_level = 0,
-        };
-    }
 };
 
 // ============================================================
@@ -369,6 +320,57 @@ pub const WeightMatrix = struct {
 // 48 bytes. Tag determines interpretation of value field.
 // TAG_MATRIX/TAG_VECTOR facts reference WeightMatrix/WeightVector.
 // ============================================================
+
+pub const Provenance = struct {
+    source_type: i32 = @intFromEnum(SourceType.unknown),
+    source_id: VdrId = .{},
+    confidence: Q16 = .{},
+    timestamp: i32 = 0,
+    derivation_rule_id: VdrId = .{},
+    capability_level: i32 = 0, // for per-weight access control
+
+    pub fn direct(source: SourceType, kb_id: VdrId, slot_id: i32, time: i32) Provenance {
+        return .{
+            .source_type = @intFromEnum(source),
+            .source_kb_id = kb_id,
+            .source_slot_id = slot_id,
+            .confidence = confidence_table[@intCast(@intFromEnum(source))],
+            .timestamp = time,
+            .derivation_rule_id = -1,
+            .capability_level = 0,
+        };
+    }
+
+    pub fn derived(rule_id: i32, kb_id: VdrId, slot_id: i32, conf: Q16, time: i32) Provenance {
+        return .{
+            .source_type = @intFromEnum(SourceType.prolog_derivation),
+            .source_kb_id = kb_id,
+            .source_slot_id = slot_id,
+            .confidence = conf,
+            .timestamp = time,
+            .derivation_rule_id = rule_id,
+            .capability_level = 0,
+        };
+    }
+};
+
+pub const FactTag = enum(i32) {
+    value = 0,
+    text = 1,
+    reference = 2,
+    timestamp = 3,
+    enum_tag = 4,
+    boolean = 5,
+    vector = 6,
+    matrix = 7,
+    provenance_tag = 8,
+    rule_ref = 9,
+    grammar_ref = 10,
+    counter = 11,
+    relation = 12,
+    column_schema = 13,
+    empty = 255,
+};
 
 pub const Fact = struct {
     tag: FactTag = .empty,
@@ -432,21 +434,25 @@ pub const KbWeightRefs = struct {
 };
 
 pub const KBEntryType = enum(u4) {
+    // Storage
     kb = 0,
-    fact,
-    rule,
-    constraint,
-    grammar,
-    lru,
-    counter,
-    lock,
-    queue,
-    stack,
-    ring,
-    bitset,
-    iose,
-    relation,
-    domain_relation, // 15, only 1 left before we have to remove some
+    data, // This is the Raw data
+    fact, // Q16 with Provenance
+    rule, // Prolog Rule
+    constraint, // Prolog Rule that allows of denies an operation
+    grammar, // Prolog rule that matches any type of grammar (JSON, Python, PDF) for parsing or generation.  `parse` flipped to `generate` with the same instruction flow will induct or output the data in format
+    // Computation
+    lru, // Least Recently Used Set
+    counter, // Counters
+    lock, // Locks
+    queue, // FIFOs
+    stack, // Stacks
+    ring, // Ring Buffer
+    bitset, // Bitset
+    // Structure
+    iose, // Input, Output, Side-Effects chaining
+    relation, // Relationship
+    domain_relation, // Domain Relationship.  NOTE: If we have to cut something to add a new type, this can probably be cut, leaving for now as it was in the spec
 };
 
 pub const LookupId = u20;
@@ -470,6 +476,13 @@ pub const KbLookup = struct {
     children: ?std.AutoHashMap(LookupId, i32) = null,
 };
 
+pub const KBData = struct {
+    v: Q16 = .{},
+    label: ?TextSmall = null,
+    text: ?TextSmall = null,
+    timestamp: DeepTime = deep_time.UNIX_EPOCH_IN_DEEP_TIME, // From 100B years ago to 450B years in the future, in seconds
+};
+
 pub const KB = struct {
     id: VdrId = .{},
     parent_id: VdrId = .{ .v = -1 },
@@ -478,6 +491,9 @@ pub const KB = struct {
     path_offset: i32 = 0,
     path_length: i16 = 0,
     walk_id: i32 = 0,
+
+    // Provenance.source_id the final VdrStructuralId.item_id that is the index to this array
+    data: []KBData = &[_]KBData{},
 
     // This is how we lookup any type of data, by KBEntryType
     lookup: KbLookup = KbLookup{},
@@ -658,11 +674,101 @@ pub const KB = struct {
             .ring => &self.next_ring_id,
             .bitset => &self.next_bitset_id,
             .iose => &self.next_iose_id,
+            .data => {
+                const value: u20 = @intCast(self.data.len);
+                return value;
+            },
         };
         if (ptr.* >= LOOKUP_ID_MAX) return null;
         const lid = ptr.*;
         ptr.* += 1;
         return lid;
+    }
+};
+
+pub const VdrValue = struct {
+    id: VdrId = VdrId.NONE,
+    entry_type: KBEntryType = .kb,
+    ok: bool = false,
+
+    kb: ?*KB = null,
+    fact: ?*Fact = null,
+    rule: ?*Rule = null,
+    constraint: ?*Fact = null,
+    grammar: ?*Grammar = null,
+    lru: ?*Fact = null,
+    counter_entry: ?*Fact = null,
+    lock: ?*Fact = null,
+    queue: ?*Fact = null,
+    stack: ?*Fact = null,
+    ring: ?*Fact = null,
+    bitset: ?*Fact = null,
+    iose: ?*IoSe = null,
+    relation: ?*TypedRelation = null,
+    domain_relation: ?*TypedRelation = null,
+
+    pub fn failed() VdrValue {
+        return .{};
+    }
+
+    pub fn fromFact(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .fact, .ok = true, .fact = f };
+    }
+
+    pub fn fromRule(id: VdrId, r: *Rule) VdrValue {
+        return .{ .id = id, .entry_type = .rule, .ok = true, .rule = r };
+    }
+
+    pub fn fromKb(id: VdrId, k: *KB) VdrValue {
+        return .{ .id = id, .entry_type = .kb, .ok = true, .kb = k };
+    }
+
+    pub fn fromGrammar(id: VdrId, g: *Grammar) VdrValue {
+        return .{ .id = id, .entry_type = .grammar, .ok = true, .grammar = g };
+    }
+
+    pub fn fromIoSe(id: VdrId, i: *IoSe) VdrValue {
+        return .{ .id = id, .entry_type = .iose, .ok = true, .iose = i };
+    }
+
+    pub fn fromRelation(id: VdrId, r: *TypedRelation) VdrValue {
+        return .{ .id = id, .entry_type = .relation, .ok = true, .relation = r };
+    }
+
+    pub fn fromDomainRelation(id: VdrId, r: *TypedRelation) VdrValue {
+        return .{ .id = id, .entry_type = .domain_relation, .ok = true, .domain_relation = r };
+    }
+
+    pub fn fromConstraint(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .constraint, .ok = true, .constraint = f };
+    }
+
+    pub fn fromLru(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .lru, .ok = true, .lru = f };
+    }
+
+    pub fn fromCounter(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .counter, .ok = true, .counter_entry = f };
+    }
+
+    pub fn fromLock(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .lock, .ok = true, .lock = f };
+    }
+
+    pub fn fromQueue(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .queue, .ok = true, .queue = f };
+    }
+
+    pub fn fromStack(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .stack, .ok = true, .stack = f };
+    }
+
+    pub fn fromRing(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .ring, .ok = true, .ring = f };
+    }
+
+    pub fn fromBitset(id: VdrId, f: *Fact) VdrValue {
+        return .{ .id = id, .entry_type = .bitset, .ok = true, .bitset = f };
     }
 };
 
