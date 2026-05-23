@@ -67,19 +67,21 @@ pub fn getAllocator() ?std.mem.Allocator {
 const vtable = std.mem.Allocator.VTable{
     .alloc = vtableAlloc,
     .resize = vtableResize,
+    .remap = vtableRemap,
     .free = vtableFree,
 };
 
 fn vtableAlloc(ctx: *anyopaque, len: usize, alignment: std.mem.Alignment, _: usize) ?[*]u8 {
     const a: *Arena = @ptrCast(@alignCast(ctx));
-    return a.alloc(len, @intFromEnum(alignment));
+    return a.alloc(len, alignment.toByteUnits());
 }
 
 fn vtableResize(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize, _: usize) bool {
-    // Bump allocator cannot resize
     return false;
 }
 
-fn vtableFree(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize) void {
-    // Bump allocator does not free individual allocations
+fn vtableRemap(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize, _: usize) ?[*]u8 {
+    return null;
 }
+
+fn vtableFree(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize) void {}

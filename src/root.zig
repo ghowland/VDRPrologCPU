@@ -5,6 +5,8 @@ const types = @import("vdr_types.zig");
 const vdr_arena = @import("vdr_arena.zig");
 const resetable_memory = @import("resetable_memory.zig");
 
+const vdr_http = @import("vdr_http.zig");
+
 // Types
 const Text = @import("text.zig").Text;
 
@@ -89,9 +91,26 @@ pub fn main() void {
     std.debug.print("=== config loaded OK ===\n", .{});
     std.debug.print("VDR-Prolog kernel ready\n", .{});
 
-    // Test test
-    const text = Text.init("Testing 123\n");
-    std.debug.print("Text test: {s}\n", .{text.toText()});
+    // // Test test
+    // const text = Text.init("Testing 123\n");
+    // std.debug.print("Text test: {s}\n", .{text.toText()});
+    // resetable_memory.reset();
+    // const text2 = Text.init("Testing 987\n");
+    // std.debug.print("Text test 2: {s}\n", .{text2.toText()});
+
+    std.debug.print("VDR-Prolog kernel ready\n", .{});
+
+    // Start HTTP server on unpinned thread (HT1: non-pinned)
+    const http_port: u16 = @intCast(cfg.http_port);
+    const http_thread = std.Thread.spawn(.{}, vdr_http.run, .{http_port}) catch {
+        std.debug.print("fatal: cannot spawn HTTP thread\n", .{});
+        std.process.exit(1);
+    };
+
+    std.debug.print("http: server thread spawned on port {}\n", .{http_port});
+
+    // Wait for HTTP thread (blocks until shutdown)
+    http_thread.join();
 
     // Cleanup
     resetable_memory.destroy();
