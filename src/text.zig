@@ -64,51 +64,6 @@ pub const Text = struct {
         try writer.write(self.text[0..self.len]);
     }
 
-    // pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Text {
-    //     _ = allocator;
-    //     _ = options;
-
-    //     const token = try source.next();
-    //     switch (token) {
-    //         .partial_string => |s| return Text.init(s), // <256 bytes
-    //         .string => |s| return Text.init(s),
-    //         // .allocated_string => |s| return Text.init(s),
-    //         // .object_begin => {
-    //         //     std.debug.print("OBJECT_BEGIN\n", .{});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // .object_end => {
-    //         //     std.debug.print("OBJECT_END\n", .{});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // .array_begin => {
-    //         //     std.debug.print("ARRAY_BEGIN\n", .{});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // .array_end => {
-    //         //     std.debug.print("ARRAY_END\n", .{});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // .number => |num| {
-    //         //     std.debug.print("NUM: {s}\n", .{num});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // .true => {
-    //         //     std.debug.print("TRUE\n", .{});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // .false => {
-    //         //     std.debug.print("FALSE\n", .{});
-    //         //     return Text.init("fail");
-    //         // },
-    //         // // else => std.debug.print("{any}\n", .{token}),
-    //         else => {
-    //             std.debug.print("Failed: {any}\n", .{token});
-    //             return error.UnexpectedToken;
-    //         },
-    //     }
-    // }
-
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Text {
         _ = allocator;
         _ = options;
