@@ -18,7 +18,6 @@
   "root.edu.history.military_tactics": "data/kb_raw/history_military_tactics.md",
   "root.edu.law": "data/kb_raw/law_common_english_in_us.md",
   "root.edu.cognition": "data/kb_raw/cognition_understanding_thinking.md",
-  "root.edu.connections": "data/kb_raw/connections.md",
   "root.edu.movement": "data/kb_raw/movement_locomotion_temporal.md",
 
   "root.programming.algorithms": "data/kb_raw/programming_algorithms.md",
@@ -50,6 +49,7 @@
   "root.language.english_grammar": "data/kb_raw/english_grammar.md",
   "root.language.english_phrasing": "data/kb_raw/english_phrasing.md",
   "root.language.english_vocabulary": "data/kb_raw/english_vocabulary.md",
+  "root.language.connections": "data/kb_raw/connections.md",
 
   "root.literature.classical": "data/kb_raw/literature_classical.md",
   "root.literature.fantasy": "data/kb_raw/literature_fantasy.md",
