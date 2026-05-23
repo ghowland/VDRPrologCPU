@@ -92,13 +92,12 @@ pub fn main() void {
     std.debug.print("=== config loaded OK ===\n", .{});
     std.debug.print("VDR-Prolog kernel ready\n", .{});
 
-    std.debug.print("VDR-Prolog kernel ready\n", .{});
-
     // Load KB Test
-    const configMaybe = load_kbs(global_arena);
-    if (configMaybe == null) return;
-    const config = configMaybe.?;
-    _ = config;
+    const config = load_kbs(global_arena) orelse return;
+
+    // Create and Populate tree
+    create_kb_tree(global_arena, config);
+    populate_kb_data(global_arena, config);
 
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);
@@ -174,6 +173,9 @@ fn load_kbs(global_arena: *types.Arena) ?*kb_config.KbConfig {
 
         if (compact_loader.loadCompactFile(global_arena, full_path)) |result| {
             compact_loader.printLoadStats(result);
+            if (config.findByFile(full_path)) |idx| {
+                config.entries[idx].load_result = result;
+            }
             if (files_loaded < 256) {
                 loaded_results[files_loaded] = result;
             }
@@ -243,4 +245,72 @@ fn load_kbs(global_arena: *types.Arena) ?*kb_config.KbConfig {
     }
 
     return config;
+}
+
+fn create_kb_tree(global_arena: *types.Arena, config: *kb_config.KbConfig) void {
+    std.debug.print("\n=== Creating KB Tree ===\n", .{});
+
+    const alloc = global_arena.allocator();
+    var kbs_created: usize = 0;
+
+    for (0..config.count) |i| {
+        const kb = global_arena.allocTyped(types.KB) orelse {
+            std.debug.print("kb_tree: arena full\n", .{});
+            return;
+        };
+        kb.* = types.KB{};
+        kb.lookup.facts = std.AutoHashMap(types.LookupId, i32).init(alloc);
+        kb.lookup.relations = std.AutoHashMap(types.LookupId, i32).init(alloc);
+        config.entries[i].kb = kb;
+        kbs_created += 1;
+    }
+
+    std.debug.print("  KBs created: {}\n", .{kbs_created});
+    std.debug.print("  arena used:  {} bytes\n", .{global_arena.usedBytes()});
+    std.debug.print("  arena free:  {} bytes\n", .{global_arena.freeBytes()});
+}
+
+fn populate_kb_data(global_arena: *types.Arena, config: *kb_config.KbConfig) void {
+    std.debug.print("\n=== Populating KB Data ===\n", .{});
+    _ = global_arena;
+
+    var total_facts: usize = 0;
+    var total_rels: usize = 0;
+
+    for (0..config.count) |i| {
+        const entry = &config.entries[i];
+        const result = entry.load_result orelse continue;
+        const kb = entry.kb orelse continue;
+
+        var kb_facts: usize = 0;
+        var kb_rels: usize = 0;
+
+        for (0..result.table_count) |ti| {
+            const table = &result.tables[ti];
+            for (0..table.row_count) |ri| {
+                const lid = kb.mintLookupId(.fact) orelse break;
+                if (kb.lookup.facts) |*m| {
+                    m.put(lid, @intCast(ri)) catch {};
+                }
+                kb_facts += 1;
+                // _ = ri;
+            }
+        }
+
+        for (0..result.relationship_count) |ri| {
+            if (result.relationships[ri].canonical_type == .unknown) continue;
+            const lid = kb.mintLookupId(.relation) orelse break;
+            if (kb.lookup.relations) |*m| {
+                m.put(lid, @intCast(ri)) catch {};
+            }
+            kb_rels += 1;
+        }
+
+        std.debug.print("  {s}: {d} facts, {d} rels\n", .{ entry.dottedSlice(), kb_facts, kb_rels });
+        total_facts += kb_facts;
+        total_rels += kb_rels;
+    }
+
+    std.debug.print("\n  total facts:     {}\n", .{total_facts});
+    std.debug.print("  total relations: {}\n", .{total_rels});
 }

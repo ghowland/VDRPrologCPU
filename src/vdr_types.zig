@@ -480,7 +480,7 @@ pub const KB = struct {
     walk_id: i32 = 0,
 
     // This is how we lookup any type of data, by KBEntryType
-    lookup: ?*KbLookup = null,
+    lookup: KbLookup = KbLookup{},
 
     // Persistent stores
     facts_offset: i32 = 0,
@@ -1348,10 +1348,39 @@ pub const RunnerHandle = struct {
 // Arena Types — fixed-size, bump-pointer, no free
 // ============================================================
 
+const arena_vtable = std.mem.Allocator.VTable{
+    .alloc = arenaVtableAlloc,
+    .resize = arenaVtableResize,
+    .remap = arenaVtableRemap,
+    .free = arenaVtableFree,
+};
+
+fn arenaVtableAlloc(ctx: *anyopaque, len: usize, alignment: std.mem.Alignment, _: usize) ?[*]u8 {
+    const a: *Arena = @ptrCast(@alignCast(ctx));
+    return a.alloc(len, alignment.toByteUnits());
+}
+
+fn arenaVtableResize(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize, _: usize) bool {
+    return false;
+}
+
+fn arenaVtableRemap(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize, _: usize) ?[*]u8 {
+    return null;
+}
+
+fn arenaVtableFree(_: *anyopaque, _: []u8, _: std.mem.Alignment, _: usize) void {}
+
 pub const Arena = struct {
     base: [*]u8 = undefined,
     size: usize = 0,
     cursor: usize = 0,
+
+    pub fn allocator(self: *Arena) std.mem.Allocator {
+        return .{
+            .ptr = @ptrCast(self),
+            .vtable = &arena_vtable,
+        };
+    }
 
     pub fn alloc(self: *Arena, bytes: usize, alignment: usize) ?[*]u8 {
         const mask = alignment - 1;

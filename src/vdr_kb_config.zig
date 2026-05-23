@@ -5,6 +5,7 @@
 
 const std = @import("std");
 const types = @import("vdr_types.zig");
+const vdr_compact_loader = @import("vdr_compact_loader.zig");
 
 const Arena = types.Arena;
 
@@ -17,6 +18,9 @@ pub const KbConfigEntry = struct {
     dotted_path_len: usize = 0,
     file_path: [MAX_PATH]u8 = [_]u8{0} ** MAX_PATH,
     file_path_len: usize = 0,
+
+    kb: ?*types.KB = null,
+    load_result: ?*vdr_compact_loader.LoadResult = null,
 
     pub fn dottedSlice(self: *const KbConfigEntry) []const u8 {
         return self.dotted_path[0..self.dotted_path_len];
