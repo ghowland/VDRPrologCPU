@@ -3,6 +3,7 @@ const net = std.net;
 const posix = std.posix;
 const resetable_memory = @import("resetable_memory.zig");
 const handler = @import("vdr_http_handler.zig");
+const accepter = @import("vdr_http_accepter.zig");
 const Text = @import("text.zig").Text;
 
 const READ_BUFFER_SIZE: usize = 8192;
@@ -12,6 +13,7 @@ pub var shutdown: bool = false;
 
 pub fn requestShutdown() void {
     shutdown = true;
+    accepter.stop();
 }
 
 pub fn run(port: u16) void {
@@ -28,25 +30,27 @@ pub fn run(port: u16) void {
 
     std.debug.print("http: listening on 127.0.0.1:{}\n", .{port});
 
+    // Start handler threads via accepter
+    accepter.init(4);
+
     while (!shutdown) {
         const conn = server.accept() catch |err| {
             if (shutdown) break;
             std.debug.print("http: accept error: {any}\n", .{err});
             continue;
         };
-        defer conn.stream.close();
 
-        handle_connection(conn) catch |err| {
-            std.debug.print("http: handle_connection error: {any}\n", .{err});
-        };
-
-        resetable_memory.reset();
+        if (!accepter.dispatch(conn)) {
+            // Ring was full — 503
+            write_503(conn);
+        }
     }
 
+    accepter.stop();
     std.debug.print("http: shutdown clean\n", .{});
 }
 
-fn handle_connection(conn: net.Server.Connection) !void {
+pub fn handle_connection(conn: net.Server.Connection) !void {
     const scratch = resetable_memory.getAllocator() orelse return;
 
     var raw = std.array_list.Managed(u8).init(scratch);
@@ -200,4 +204,9 @@ fn write_405(conn: net.Server.Connection, alloc: std.mem.Allocator) !void {
 
 fn write_411(conn: net.Server.Connection, alloc: std.mem.Allocator) !void {
     try write_response(conn, alloc, 411, "Length Required", "text/plain", "Content-Length header required");
+}
+
+fn write_503(conn: net.Server.Connection) void {
+    const response = "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+    write_all(conn.stream.handle, response) catch {};
 }
