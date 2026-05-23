@@ -96,7 +96,7 @@ pub fn main() void {
     std.debug.print("VDR-Prolog kernel ready\n", .{});
 
     // Load KB Test
-    test_load(global_arena);
+    load_kbs(global_arena);
 
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);
@@ -116,42 +116,56 @@ pub fn main() void {
     std.debug.print("VDR-Prolog kernel shutdown\n", .{});
 }
 
-fn test_load(global_arena: *types.Arena) void {
+fn load_kbs(global_arena: *types.Arena) void {
     std.debug.print("\n=== Loading compact files ===\n", .{});
 
-    const test_files = [_][]const u8{
-        "data/kb_raw/english_vocabulary.md",
-        "data/kb_raw/mathematics_foundation.md",
-        "data/kb_raw/physics.md",
-        "data/kb_raw/biology.md",
-        "data/kb_raw/programming_zig.md",
-        "data/kb_raw/history_human.md",
-        "data/kb_raw/philosophy_ancient.md",
-        "data/kb_raw/cooking_basic.md",
+    const dir_path = "data/kb_raw";
+    var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch {
+        std.debug.print("compact_loader: cannot open directory '{s}'\n", .{dir_path});
+        return;
     };
+    defer dir.close();
 
     var total_tables: usize = 0;
     var total_rows: usize = 0;
     var total_rels: usize = 0;
     var total_bytes: usize = 0;
     var files_loaded: usize = 0;
+    var files_skipped: usize = 0;
 
-    for (test_files) |path| {
-        if (compact_loader.loadCompactFile(global_arena, path)) |result| {
+    var iter = dir.iterate();
+    while (iter.next() catch null) |entry| {
+        if (entry.kind != .file) continue;
+
+        // Check .md extension
+        const name = entry.name;
+        if (name.len < 4) continue;
+        if (!std.mem.eql(u8, name[name.len - 3 ..], ".md")) continue;
+
+        // Build full path: dir_path / name
+        var path_buf: [512]u8 = undefined;
+        const prefix = dir_path ++ "/";
+        if (prefix.len + name.len > 512) continue;
+        @memcpy(path_buf[0..prefix.len], prefix);
+        @memcpy(path_buf[prefix.len .. prefix.len + name.len], name);
+        const full_path = path_buf[0 .. prefix.len + name.len];
+
+        if (compact_loader.loadCompactFile(global_arena, full_path)) |result| {
             compact_loader.printLoadStats(result);
-            compact_loader.printSampleRows(result, global_arena, 3, 2);
             total_tables += result.table_count;
             total_rows += result.total_rows;
             total_rels += result.relationship_count;
             total_bytes += result.file_bytes;
             files_loaded += 1;
         } else {
-            std.debug.print("compact_loader: FAILED to load '{s}'\n", .{path});
+            std.debug.print("compact_loader: FAILED to load '{s}'\n", .{full_path});
+            files_skipped += 1;
         }
     }
 
     std.debug.print("\n=== Compact Loading Summary ===\n", .{});
     std.debug.print("  files loaded:     {}\n", .{files_loaded});
+    std.debug.print("  files skipped:    {}\n", .{files_skipped});
     std.debug.print("  total tables:     {}\n", .{total_tables});
     std.debug.print("  total rows:       {}\n", .{total_rows});
     std.debug.print("  total relations:  {}\n", .{total_rels});
