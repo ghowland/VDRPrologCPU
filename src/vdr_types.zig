@@ -5,29 +5,124 @@
 // Zig 0.15.1 target. x86_64 only.
 // ============================================================
 
+const std = @import("std");
+
 // ============================================================
 // Fundamental: VDR ID — sign-bit partitioned addressing
 // Positive = global (persistent). Negative = ephemeral (session-local).
 // ============================================================
 
+pub const StructuralId = packed struct(u64) {
+    item_id: u20 = 0,
+    l5: u8 = 255,
+    l4: u8 = 255,
+    l3: u8 = 255,
+    l2: u8 = 255,
+    l1: u7 = 127,
+    entry_type: u4 = 0,
+    scope: u1 = 0,
+};
+
 pub const VdrId = struct {
     v: i64 = 0,
 
     pub const NONE: VdrId = .{ .v = 0 };
-    pub const ROOT: VdrId = .{ .v = 1 };
-    pub const EPHEMERAL_ROOT: VdrId = .{ .v = -1 };
+    pub const ROOT: VdrId = fromStructural(.{ .scope = 0, .l1 = 0 });
+    pub const EPHEMERAL_ROOT: VdrId = fromStructural(.{ .scope = 1, .l1 = 0 });
 
     pub fn isGlobal(self: VdrId) bool {
         return self.v >= 0;
     }
+
     pub fn isEphemeral(self: VdrId) bool {
         return self.v < 0;
     }
+
     pub fn isNone(self: VdrId) bool {
         return self.v == 0;
     }
+
     pub fn eql(a: VdrId, b: VdrId) bool {
         return a.v == b.v;
+    }
+
+    pub fn structural(self: VdrId) StructuralId {
+        return @bitCast(@as(u64, @bitCast(self.v)));
+    }
+
+    pub fn fromStructural(s: StructuralId) VdrId {
+        return .{ .v = @bitCast(@as(u64, @bitCast(s))) };
+    }
+
+    pub fn entryType(self: VdrId) KBEntryType {
+        return @enumFromInt(self.structural().entry_type);
+    }
+
+    pub fn lookupId(self: VdrId) LookupId {
+        return self.structural().item_id;
+    }
+
+    pub fn depth(self: VdrId) u3 {
+        const s = self.structural();
+        if (s.l1 == 127) return 0;
+        if (s.l2 == 255) return 1;
+        if (s.l3 == 255) return 2;
+        if (s.l4 == 255) return 3;
+        if (s.l5 == 255) return 4;
+        return 5;
+    }
+
+    pub fn sameSubtreeL1(a: VdrId, b: VdrId) bool {
+        return a.structural().l1 == b.structural().l1;
+    }
+
+    pub fn sameSubtreeL2(a: VdrId, b: VdrId) bool {
+        const sa = a.structural();
+        const sb = b.structural();
+        return sa.l1 == sb.l1 and sa.l2 == sb.l2;
+    }
+
+    pub fn sameSubtreeL3(a: VdrId, b: VdrId) bool {
+        const sa = a.structural();
+        const sb = b.structural();
+        return sa.l1 == sb.l1 and sa.l2 == sb.l2 and sa.l3 == sb.l3;
+    }
+
+    pub fn makeKb(scope_val: u1, l1_val: u7, l2_val: u8, l3_val: u8, l4_val: u8, l5_val: u8) VdrId {
+        return fromStructural(.{
+            .scope = scope_val,
+            .entry_type = @intFromEnum(KBEntryType.kb),
+            .l1 = l1_val,
+            .l2 = l2_val,
+            .l3 = l3_val,
+            .l4 = l4_val,
+            .l5 = l5_val,
+            .item_id = 0,
+        });
+    }
+
+    pub fn makeItem(host_id: VdrId, entry: KBEntryType, lid: LookupId) VdrId {
+        const s = host_id.structural();
+        return fromStructural(.{
+            .scope = s.scope,
+            .entry_type = @intFromEnum(entry),
+            .l1 = s.l1,
+            .l2 = s.l2,
+            .l3 = s.l3,
+            .l4 = s.l4,
+            .l5 = s.l5,
+            .item_id = lid,
+        });
+    }
+
+    pub fn makeChildKb(parent_id: VdrId, child_index: u8) ?VdrId {
+        const s = parent_id.structural();
+        if (s.l1 == 127) return makeKb(s.scope, @intCast(child_index), 255, 255, 255, 255);
+        if (s.l2 == 255) return makeKb(s.scope, s.l1, child_index, 255, 255, 255);
+        if (s.l3 == 255) return makeKb(s.scope, s.l1, s.l2, child_index, 255, 255);
+        if (s.l4 == 255) return makeKb(s.scope, s.l1, s.l2, s.l3, child_index, 255);
+        if (s.l5 == 255) return makeKb(s.scope, s.l1, s.l2, s.l3, s.l4, child_index);
+        return null;
     }
 };
 
@@ -336,6 +431,27 @@ pub const KbWeightRefs = struct {
     gemm_cache: ?GemmCache = null,
 };
 
+pub const KBEntryType = enum(u4) {
+    kb = 0,
+    fact,
+    rule,
+    constraint,
+    grammar,
+    lru,
+    counter,
+    lock,
+    queue,
+    stack,
+    ring,
+    bitset,
+    iose,
+    relation,
+    domain_relation, // 15, only 1 left before we have to remove some
+};
+
+pub const LookupId = u20;
+pub const LOOKUP_ID_MAX: LookupId = std.math.maxInt(u20);
+
 pub const KB = struct {
     id: VdrId = .{},
     parent_id: VdrId = .{ .v = -1 },
@@ -433,6 +549,25 @@ pub const KB = struct {
     // directly without an FSM for standalone scoring decisions
     behavior_set_offset: i32 = -1,
 
+    // ---- Per-entry-type monotonic counters ----
+    // Each entry type has its own LookupId counter.
+    // The LookupId goes into the final 20 bits of the VdrId.
+    // entry_type in the VdrId selects which counter was used.
+    next_fact_id: LookupId = 0,
+    next_rule_id: LookupId = 0,
+    next_constraint_id: LookupId = 0,
+    next_grammar_id: LookupId = 0,
+    next_relation_id: LookupId = 0,
+    next_domain_relation_id: LookupId = 0,
+    next_lru_id: LookupId = 0,
+    next_counter_id: LookupId = 0,
+    next_lock_id: LookupId = 0,
+    next_queue_id: LookupId = 0,
+    next_stack_id: LookupId = 0,
+    next_ring_id: LookupId = 0,
+    next_bitset_id: LookupId = 0,
+    next_iose_id: LookupId = 0,
+
     // true if this KB has a functor index for fast rule head lookup
     pub fn hasFunctorIndex(self: KB) bool {
         return self.functor_index_offset != -1;
@@ -482,6 +617,31 @@ pub const KB = struct {
     // true if this KB has an FSM tracking its operational state
     pub fn hasFsm(self: KB) bool {
         return self.fsm_offset != -1;
+    }
+    // Mint a new LookupId for the given entry type.
+    // Returns null if counter would exceed u20 max.
+    pub fn mintLookupId(self: *KB, entry_type: KBEntryType) ?LookupId {
+        const ptr = switch (entry_type) {
+            .kb => return null, // KBs don't mint from parent
+            .fact => &self.next_fact_id,
+            .rule => &self.next_rule_id,
+            .constraint => &self.next_constraint_id,
+            .grammar => &self.next_grammar_id,
+            .relation => &self.next_relation_id,
+            .domain_relation => &self.next_domain_relation_id,
+            .lru => &self.next_lru_id,
+            .counter => &self.next_counter_id,
+            .lock => &self.next_lock_id,
+            .queue => &self.next_queue_id,
+            .stack => &self.next_stack_id,
+            .ring => &self.next_ring_id,
+            .bitset => &self.next_bitset_id,
+            .iose => &self.next_iose_id,
+        };
+        if (ptr.* >= LOOKUP_ID_MAX) return null;
+        const lid = ptr.*;
+        ptr.* += 1;
+        return lid;
     }
 };
 
