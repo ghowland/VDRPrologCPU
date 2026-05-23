@@ -437,6 +437,7 @@ pub const KBEntryType = enum(u4) {
     // Storage
     kb = 0,
     data, // This is the Raw data
+    data_q335, // This is the Raw data
     fact, // Q16 with Provenance
     rule, // Prolog Rule
     constraint, // Prolog Rule that allows of denies an operation
@@ -452,7 +453,6 @@ pub const KBEntryType = enum(u4) {
     // Structure
     iose, // Input, Output, Side-Effects chaining
     relation, // Relationship
-    domain_relation, // Domain Relationship.  NOTE: If we have to cut something to add a new type, this can probably be cut, leaving for now as it was in the spec
 };
 
 pub const LookupId = u20;
@@ -524,12 +524,30 @@ pub const KBData = struct {
     text_column_6: ?KBDataValue = null,
     text_column_7: ?KBDataValue = null,
     text_column_8: ?KBDataValue = null,
-    text_column_9: ?KBDataValue = null,
-    text_column_10: ?KBDataValue = null,
-    text_column_11: ?KBDataValue = null,
-    text_column_12: ?KBDataValue = null,
-    text_column_13: ?KBDataValue = null,
-    text_column_14: ?KBDataValue = null,
+    timestamp: ?DeepTime = null, // If there is a timestamp for this data.  ex: deep_time.UNIX_EPOCH_IN_DEEP_TIME, // From 100B years ago to 450B years in the future, in seconds
+    timestamp_duration: ?DeepTime = null, // If given, how long was this on-going since timestamp event.  This covers date range entries
+    timestamp_scope: KBDataDurationScope = KBDataDurationScope.unknown, // Is the duration in "months" or "years" or "seconds" or "decades", this gives a scope of time the duration is tracking
+};
+
+pub const KBDataQ335 = struct {
+    id: VdrId = .{},
+    v_0: Q335 = .{}, // If this data has numeric values, we put them here
+    v_0_column: i8 = -1, // If not -1, this is the column the value sources from
+    v_1: Q335 = .{},
+    v_1_column: i8 = -1, // If not -1, this is the column the value sources from
+    v_2: Q335 = .{},
+    v_2_column: i8 = -1, // If not -1, this is the column the value sources from
+    v_3: Q335 = .{},
+    v_3_column: i8 = -1, // If not -1, this is the column the value sources from
+    text_column_0: ?KBDataValue = null,
+    text_column_1: ?KBDataValue = null,
+    text_column_2: ?KBDataValue = null,
+    text_column_3: ?KBDataValue = null,
+    text_column_4: ?KBDataValue = null,
+    text_column_5: ?KBDataValue = null,
+    text_column_6: ?KBDataValue = null,
+    text_column_7: ?KBDataValue = null,
+    text_column_8: ?KBDataValue = null,
     timestamp: ?DeepTime = null, // If there is a timestamp for this data.  ex: deep_time.UNIX_EPOCH_IN_DEEP_TIME, // From 100B years ago to 450B years in the future, in seconds
     timestamp_duration: ?DeepTime = null, // If given, how long was this on-going since timestamp event.  This covers date range entries
     timestamp_scope: KBDataDurationScope = KBDataDurationScope.unknown, // Is the duration in "months" or "years" or "seconds" or "decades", this gives a scope of time the duration is tracking
@@ -546,6 +564,7 @@ pub const KB = struct {
 
     // Provenance.source_id the final VdrStructuralId.item_id that is the index to this array
     data: []KBData align(64) = &[_]KBData{},
+    data_q335: []KBDataQ335 align(64) = &[_]KBDataQ335{},
 
     // This is how we lookup any type of data, by KBEntryType
     lookup: KbLookup = KbLookup{},
