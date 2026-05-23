@@ -10,8 +10,6 @@ pub const TextBig = struct {
     text: [TEXT_LEN_MAX]u8 = [_]u8{0} ** TEXT_LEN_MAX,
     len: usize = 0,
 
-    var static_cpath_buffer: [TEXT_LEN_OVERSIZE]u8 = undefined; // Lazily allocated by using .toCPath(), after that call .deinit() and the memory is freed.  The normal TextBig data is unaffected by any of this
-
     pub fn init(input: []const u8) TextBig {
         var s = TextBig{};
         s.appendRaw(input);
@@ -471,19 +469,6 @@ pub const TextBig = struct {
             text.text[self.len] = 0;
         }
         return @ptrCast(text.text[0..].ptr);
-    }
-
-    pub fn toCString(self: TextBig) [:0]const u8 {
-        return self.toCPath();
-    }
-
-    pub fn toCPath(self: TextBig) [:0]const u8 {
-        const copy_len = @min(self.len, static_cpath_buffer.len - 1);
-
-        @memcpy(static_cpath_buffer[0..copy_len], self.text[0..copy_len]);
-        static_cpath_buffer[copy_len] = 0;
-
-        return static_cpath_buffer[0..copy_len :0];
     }
 
     pub fn deleteAt(self: *TextBig, byte_index: usize, count: usize) void {
