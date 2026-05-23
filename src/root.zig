@@ -95,7 +95,10 @@ pub fn main() void {
     std.debug.print("VDR-Prolog kernel ready\n", .{});
 
     // Load KB Test
-    load_kbs(global_arena);
+    const configMaybe = load_kbs(global_arena);
+    if (configMaybe == null) return;
+    const config = configMaybe.?;
+    _ = config;
 
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);
@@ -115,13 +118,13 @@ pub fn main() void {
     std.debug.print("VDR-Prolog kernel shutdown\n", .{});
 }
 
-fn load_kbs(global_arena: *types.Arena) void {
+fn load_kbs(global_arena: *types.Arena) ?*kb_config.KbConfig {
     std.debug.print("\n=== Loading KB config ===\n", .{});
 
     // Load or create kb.json mapping
     const config = kb_config.loadKbConfig(global_arena) orelse {
         std.debug.print("fatal: cannot allocate kb config\n", .{});
-        return;
+        return null;
     };
 
     std.debug.print("\n=== Loading compact files ===\n", .{});
@@ -129,7 +132,7 @@ fn load_kbs(global_arena: *types.Arena) void {
     const dir_path = "data/kb_raw";
     var dir = std.fs.cwd().openDir(dir_path, .{ .iterate = true }) catch {
         std.debug.print("compact_loader: cannot open directory '{s}'\n", .{dir_path});
-        return;
+        return null;
     };
     defer dir.close();
 
@@ -238,4 +241,6 @@ fn load_kbs(global_arena: *types.Arena) void {
             std.debug.print("{s}: (not loaded)\n", .{dotted});
         }
     }
+
+    return config;
 }
