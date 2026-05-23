@@ -1,0 +1,19 @@
+{
+    "n_cores": 4,
+    "http_port": 1138,
+    "global_arena_bytes": 1073741824,
+    "per_core_arena_bytes": 234881024,
+    "max_total_kbs": 100000,
+    "max_total_facts": 10000000,
+    "max_total_rules": 100000,
+    "max_total_terms": 1000000,
+    "max_sessions_per_core": 500,
+    "max_ephemeral_kbs_per_session": 1000,
+    "max_facts_per_session_kb": 10000,
+    "default_max_turns": 0,
+    "auto_snapshot_interval": 100,
+    "max_runners": 64,
+    "audit_ring_capacity": 1000000,
+    "default_visibility": 1,
+    "relation_index_rebuild_interval": 100
+}
