@@ -8,7 +8,7 @@ const Text = @import("text.zig").Text;
 const READ_BUFFER_SIZE: usize = 8192;
 const MAX_HEADER_BYTES: usize = 1024 * 64;
 
-var shutdown: bool = false;
+pub var shutdown: bool = false;
 
 pub fn requestShutdown() void {
     shutdown = true;
@@ -101,20 +101,26 @@ fn handle_connection(conn: net.Server.Connection) !void {
 
     std.debug.print("http: {s} {s} {s}\n", .{ method, path, version });
 
-    if (!std.mem.eql(u8, method, "POST")) {
+    if (!std.mem.eql(u8, method, "POST") and !std.mem.eql(u8, method, "GET")) {
         try write_405(conn, scratch);
         return;
     }
 
-    const content_length = parse_content_length(header_block) catch |err| {
-        std.debug.print("http: content-length parse error: {any}\n", .{err});
-        try write_411(conn, scratch);
-        return;
-    };
-
-    // Read body into Text
+    // Read body — POST requires Content-Length, GET body is optional
     var body = Text.initEmpty();
     body.appendRaw(initial_body_bytes);
+
+    const content_length = parse_content_length(header_block);
+    if (content_length == -1) {
+        if (std.mem.eql(u8, method, "POST")) {
+            try write_411(conn, scratch);
+            return;
+        }
+        // GET without Content-Length: use whatever body bytes arrived with headers
+        const result = handler.handle(method, path, &body);
+        try write_response(conn, scratch, result.status_code, result.status_text, result.content_type, result.body.toText());
+        return;
+    }
 
     while (body.len < @as(usize, @intCast(content_length))) {
         const remaining = @as(usize, @intCast(content_length)) - body.len;
@@ -138,7 +144,7 @@ fn handle_connection(conn: net.Server.Connection) !void {
     try write_response(conn, scratch, result.status_code, result.status_text, result.content_type, result.body.toText());
 }
 
-fn parse_content_length(header_block: []const u8) !i32 {
+fn parse_content_length(header_block: []const u8) i32 {
     var i: usize = 0;
     while (i < header_block.len) {
         const rest = header_block[i..];
@@ -151,7 +157,7 @@ fn parse_content_length(header_block: []const u8) !i32 {
                 if (std.ascii.eqlIgnoreCase(name, "Content-Length")) {
                     var value = line[colon_pos + 1 ..];
                     value = std.mem.trim(u8, value, " \t");
-                    return std.fmt.parseInt(i32, value, 10) catch return error.InvalidContentLength;
+                    return std.fmt.parseInt(i32, value, 10) catch return -1;
                 }
             }
         }
@@ -161,7 +167,7 @@ fn parse_content_length(header_block: []const u8) !i32 {
         if (i >= header_block.len) break;
     }
 
-    return error.MissingContentLength;
+    return -1;
 }
 
 fn write_all(handle: posix.socket_t, bytes: []const u8) !void {

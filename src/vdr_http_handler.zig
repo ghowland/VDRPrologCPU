@@ -1,6 +1,8 @@
 const std = @import("std");
 const Text = @import("text.zig").Text;
 
+const vdr_http = @import("vdr_http.zig");
+
 pub const HandlerResult = struct {
     status_code: u16 = 200,
     status_text: []const u8 = "OK",
@@ -12,7 +14,10 @@ pub const HandlerResult = struct {
 pub fn handle(method: []const u8, path: []const u8, body: *const Text) HandlerResult {
     _ = method;
 
-    if (!std.mem.eql(u8, path, "/run")) {
+    if (std.mem.eql(u8, path, "/shutdown")) {
+        // Quit
+        vdr_http.shutdown = true;
+    } else if (!std.mem.eql(u8, path, "/run")) {
         var result = HandlerResult{
             .status_code = 404,
             .status_text = "Not Found",
