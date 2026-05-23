@@ -452,6 +452,24 @@ pub const KBEntryType = enum(u4) {
 pub const LookupId = u20;
 pub const LOOKUP_ID_MAX: LookupId = std.math.maxInt(u20);
 
+pub const KbLookup = struct {
+    facts: ?std.AutoHashMap(LookupId, i32) = null,
+    rules: ?std.AutoHashMap(LookupId, i32) = null,
+    constraints: ?std.AutoHashMap(LookupId, i32) = null,
+    grammars: ?std.AutoHashMap(LookupId, i32) = null,
+    relations: ?std.AutoHashMap(LookupId, i32) = null,
+    domain_relations: ?std.AutoHashMap(LookupId, i32) = null,
+    lru: ?std.AutoHashMap(LookupId, i32) = null,
+    counters: ?std.AutoHashMap(LookupId, i32) = null,
+    locks: ?std.AutoHashMap(LookupId, i32) = null,
+    queues: ?std.AutoHashMap(LookupId, i32) = null,
+    stacks: ?std.AutoHashMap(LookupId, i32) = null,
+    rings: ?std.AutoHashMap(LookupId, i32) = null,
+    bitsets: ?std.AutoHashMap(LookupId, i32) = null,
+    iose: ?std.AutoHashMap(LookupId, i32) = null,
+    children: ?std.AutoHashMap(LookupId, i32) = null,
+};
+
 pub const KB = struct {
     id: VdrId = .{},
     parent_id: VdrId = .{ .v = -1 },
@@ -460,6 +478,9 @@ pub const KB = struct {
     path_offset: i32 = 0,
     path_length: i16 = 0,
     walk_id: i32 = 0,
+
+    // This is how we lookup any type of data, by KBEntryType
+    lookup: ?*KbLookup = null,
 
     // Persistent stores
     facts_offset: i32 = 0,

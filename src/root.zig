@@ -141,6 +141,8 @@ fn load_kbs(global_arena: *types.Arena) void {
     var files_skipped: usize = 0;
     var new_entries: usize = 0;
 
+    var loaded_results: [256]?*compact_loader.LoadResult = [_]?*compact_loader.LoadResult{null} ** 256;
+
     var iter = dir.iterate();
     while (iter.next() catch null) |entry| {
         if (entry.kind != .file) continue;
@@ -169,6 +171,9 @@ fn load_kbs(global_arena: *types.Arena) void {
 
         if (compact_loader.loadCompactFile(global_arena, full_path)) |result| {
             compact_loader.printLoadStats(result);
+            if (files_loaded < 256) {
+                loaded_results[files_loaded] = result;
+            }
             total_tables += result.table_count;
             total_rows += result.total_rows;
             total_rels += result.relationship_count;
@@ -195,4 +200,42 @@ fn load_kbs(global_arena: *types.Arena) void {
     std.debug.print("  total file bytes: {}\n", .{total_bytes});
     std.debug.print("  arena used:       {} bytes\n", .{global_arena.usedBytes()});
     std.debug.print("  arena free:       {} bytes\n", .{global_arena.freeBytes()});
+
+    // Print KB hierarchy from config
+    std.debug.print("\n=== KB Hierarchy ===\n", .{});
+    for (0..config.count) |i| {
+        const dotted = config.entries[i].dottedSlice();
+        const file = config.entries[i].fileSlice();
+
+        // Count depth by counting dots
+        var dot_count: usize = 0;
+        for (dotted) |c| {
+            if (c == '.') dot_count += 1;
+        }
+
+        // Indent by depth (root.X = 1 dot = L1, root.X.Y = 2 dots = L2, etc.)
+        for (0..dot_count) |_| {
+            std.debug.print("  ", .{});
+        }
+
+        // Find the matching LoadResult for this file
+        var found = false;
+        for (0..files_loaded) |f| {
+            if (loaded_results[f]) |result| {
+                if (std.mem.eql(u8, result.pathSlice(), file)) {
+                    std.debug.print("{s}: {d} tables, {d} rows, {d} rels\n", .{
+                        dotted,
+                        result.table_count,
+                        result.total_rows,
+                        result.relationship_count,
+                    });
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            std.debug.print("{s}: (not loaded)\n", .{dotted});
+        }
+    }
 }
