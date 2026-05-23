@@ -1,11 +1,11 @@
 const std = @import("std");
-const types = @import("vdr_types");
+const types = @import("vdr_types.zig");
 
 const Arena = types.Arena;
 
-/// Create an arena backed by page_allocator memory.
-/// Returns null if allocation fails.
-/// size_bytes is the usable capacity of the arena.
+// Create an arena backed by page_allocator memory.
+// Returns null if allocation fails.
+// size_bytes is the usable capacity of the arena.
 pub fn create(size_bytes: usize) ?*Arena {
     const allocator = std.heap.page_allocator;
 
@@ -27,7 +27,7 @@ pub fn create(size_bytes: usize) ?*Arena {
     return arena_ptr;
 }
 
-/// Destroy an arena, freeing its backing memory and the struct itself.
+// Destroy an arena, freeing its backing memory and the struct itself.
 pub fn destroy(arena: *Arena) void {
     const allocator = std.heap.page_allocator;
     const backing = arena.base[0..arena.size];

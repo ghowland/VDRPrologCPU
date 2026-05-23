@@ -1,5 +1,5 @@
 const std = @import("std");
-const types = @import("vdr_types");
+const types = @import("vdr_types.zig");
 
 pub const ConfigError = enum(i32) {
     ok = 0,

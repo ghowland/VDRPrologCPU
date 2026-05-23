@@ -1,8 +1,12 @@
 const std = @import("std");
-const config_mod = @import("vdr_config");
-const types = @import("vdr_types");
+const config_mod = @import("vdr_config.zig");
+const types = @import("vdr_types.zig");
 
-const arena_mod = @import("vdr_arena.zig");
+const vdr_arena = @import("vdr_arena.zig");
+const resetable_memory = @import("resetable_memory.zig");
+
+// Types
+const Text = @import("text.zig").Text;
 
 pub fn main() void {
     std.debug.print("VDR-Prolog kernel starting\n", .{});
@@ -59,7 +63,7 @@ pub fn main() void {
     std.debug.print("  prolog.max_inheritance_depth:   {}\n", .{cfg.prolog.max_inheritance_depth});
 
     // Create global arena (PR4: arena-only memory, AM1: global arena)
-    const global_arena = arena_mod.create(@intCast(cfg.global_arena_bytes)) orelse {
+    const global_arena = vdr_arena.create(@intCast(cfg.global_arena_bytes)) orelse {
         std.debug.print("fatal: cannot allocate global arena ({} bytes)\n", .{cfg.global_arena_bytes});
         std.process.exit(1);
     };
@@ -69,10 +73,28 @@ pub fn main() void {
     std.debug.print("  used:  {} bytes\n", .{global_arena.usedBytes()});
     std.debug.print("  free:  {} bytes\n", .{global_arena.freeBytes()});
 
+    // Create resetable scratch memory for Text formatting (1MB)
+    if (!resetable_memory.create(1024 * 1024)) {
+        std.debug.print("fatal: cannot allocate resetable memory\n", .{});
+        std.process.exit(1);
+    }
+
+    std.debug.print("=== Resetable Memory ===\n", .{});
+    if (resetable_memory.getArena()) |scratch| {
+        std.debug.print("  size:  {} bytes\n", .{scratch.size});
+        std.debug.print("  used:  {} bytes\n", .{scratch.usedBytes()});
+        std.debug.print("  free:  {} bytes\n", .{scratch.freeBytes()});
+    }
+
     std.debug.print("=== config loaded OK ===\n", .{});
     std.debug.print("VDR-Prolog kernel ready\n", .{});
 
+    // Test test
+    const text = Text.init("Testing 123\n");
+    std.debug.print("Text test: {s}\n", .{text.toText()});
+
     // Cleanup
-    arena_mod.destroy(global_arena);
+    resetable_memory.destroy();
+    vdr_arena.destroy(global_arena);
     std.debug.print("VDR-Prolog kernel shutdown\n", .{});
 }
