@@ -44,12 +44,13 @@ pub fn run(port: u16) void {
 }
 
 fn handleConnection(conn: net.Server.Connection) void {
+    const reader = conn.stream.reader();
     var raw = Text.initEmpty();
     var read_buf: [READ_BUFFER_SIZE]u8 = undefined;
 
     var headers_end: ?usize = null;
     while (headers_end == null) {
-        const n = conn.stream.read(&read_buf) catch |err| {
+        const n = reader.read(&read_buf) catch |err| {
             std.debug.print("http: read error: {}\n", .{err});
             return;
         };
@@ -111,7 +112,7 @@ fn handleConnection(conn: net.Server.Connection) void {
     while (body.len < content_length) {
         const remaining = content_length - body.len;
         const to_read = @min(remaining, READ_BUFFER_SIZE);
-        const n = conn.stream.read(read_buf[0..to_read]) catch |err| {
+        const n = reader.read(read_buf[0..to_read]) catch |err| {
             std.debug.print("http: body read error: {}\n", .{err});
             return;
         };
@@ -159,15 +160,7 @@ fn writeResponse(conn: net.Server.Connection, status_code: u16, status_text: []c
         .{ status_code, status_text, content_type, body.len },
     ) catch return;
 
-    writeAll(conn, header);
-    writeAll(conn, body);
-}
-
-fn writeAll(conn: net.Server.Connection, bytes: []const u8) void {
-    var sent: usize = 0;
-    while (sent < bytes.len) {
-        const n = conn.stream.write(bytes[sent..]) catch return;
-        if (n == 0) return;
-        sent += n;
-    }
+    const writer = conn.stream.writer();
+    writer.writeAll(header) catch return;
+    writer.writeAll(body) catch return;
 }
