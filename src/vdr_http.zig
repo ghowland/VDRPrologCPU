@@ -1,6 +1,5 @@
 const std = @import("std");
 const net = std.net;
-const posix = std.posix;
 const resetable_memory = @import("resetable_memory.zig");
 const handler = @import("vdr_http_handler.zig");
 const Text = @import("text.zig").Text;
@@ -45,15 +44,13 @@ pub fn run(port: u16) void {
 }
 
 fn handleConnection(conn: net.Server.Connection) void {
-    // Input text: raw HTTP bytes
     var raw = Text.initEmpty();
     var read_buf: [READ_BUFFER_SIZE]u8 = undefined;
 
-    // Read until we have headers
     var headers_end: ?usize = null;
     while (headers_end == null) {
-        const n = posix.recv(conn.stream.handle, &read_buf, 0) catch |err| {
-            std.debug.print("http: recv error: {}\n", .{err});
+        const n = conn.stream.read(&read_buf) catch |err| {
+            std.debug.print("http: read error: {}\n", .{err});
             return;
         };
         if (n == 0) return;
@@ -74,7 +71,6 @@ fn handleConnection(conn: net.Server.Connection) void {
     const hdr_end = headers_end.?;
     const after_headers = hdr_end + 4;
 
-    // Parse request line
     const first_line_end = std.mem.indexOf(u8, raw_slice[0..hdr_end], "\r\n") orelse {
         writeResponse(conn, 400, "Bad Request", "text/plain", "Malformed request line");
         return;
@@ -96,32 +92,27 @@ fn handleConnection(conn: net.Server.Connection) void {
 
     std.debug.print("http: {s} {s}\n", .{ method, path });
 
-    // Only POST
     if (!std.mem.eql(u8, method, "POST")) {
         writeResponse(conn, 405, "Method Not Allowed", "text/plain", "Only POST supported");
         return;
     }
 
-    // Parse Content-Length
     const content_length = parseContentLength(raw_slice[0..hdr_end]) orelse {
         writeResponse(conn, 411, "Length Required", "text/plain", "Content-Length required");
         return;
     };
 
-    // Handler input: body text
     var body = Text.initEmpty();
 
-    // Copy initial body bytes already read
     if (after_headers < raw.len) {
         body.appendRaw(raw_slice[after_headers..]);
     }
 
-    // Read remaining body
     while (body.len < content_length) {
         const remaining = content_length - body.len;
         const to_read = @min(remaining, READ_BUFFER_SIZE);
-        const n = posix.recv(conn.stream.handle, read_buf[0..to_read], 0) catch |err| {
-            std.debug.print("http: body recv error: {}\n", .{err});
+        const n = conn.stream.read(read_buf[0..to_read]) catch |err| {
+            std.debug.print("http: body read error: {}\n", .{err});
             return;
         };
         if (n == 0) {
@@ -131,10 +122,8 @@ fn handleConnection(conn: net.Server.Connection) void {
         body.appendRaw(read_buf[0..n]);
     }
 
-    // Dispatch to handler
     const result = handler.handle(method, path, &body);
 
-    // Write response
     writeResponse(conn, result.status_code, result.status_text, result.content_type, result.body.toText());
 }
 
@@ -170,14 +159,14 @@ fn writeResponse(conn: net.Server.Connection, status_code: u16, status_text: []c
         .{ status_code, status_text, content_type, body.len },
     ) catch return;
 
-    writeAll(conn.stream.handle, header);
-    writeAll(conn.stream.handle, body);
+    writeAll(conn, header);
+    writeAll(conn, body);
 }
 
-fn writeAll(handle: posix.socket_t, bytes: []const u8) void {
+fn writeAll(conn: net.Server.Connection, bytes: []const u8) void {
     var sent: usize = 0;
     while (sent < bytes.len) {
-        const n = posix.send(handle, bytes[sent..], 0) catch return;
+        const n = conn.stream.write(bytes[sent..]) catch return;
         if (n == 0) return;
         sent += n;
     }
