@@ -34,6 +34,26 @@ pub fn run(port: u16) void {
     accepter.init(4);
 
     while (!shutdown) {
+        // Poll before accept so we don't block on shutdown
+        var pollfds = [_]posix.pollfd{
+            .{
+                .fd = server.stream.handle,
+                .events = posix.POLL.IN,
+                .revents = 0,
+            },
+        };
+
+        // 100ms timeout — check shutdown flag periodically
+        const ready = posix.poll(&pollfds, 100) catch |err| {
+            if (shutdown) break;
+            std.debug.print("http: poll error: {any}\n", .{err});
+            std.Thread.sleep(10 * std.time.ns_per_ms);
+            continue;
+        };
+
+        if (ready == 0) continue; // timeout, loop back and check shutdown
+        if (shutdown) break;
+
         const conn = server.accept() catch |err| {
             if (shutdown) break;
             std.debug.print("http: accept error: {any}\n", .{err});
@@ -41,7 +61,6 @@ pub fn run(port: u16) void {
         };
 
         if (!accepter.dispatch(conn)) {
-            // Ring was full — 503
             write_503(conn);
         }
     }
