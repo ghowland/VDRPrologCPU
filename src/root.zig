@@ -4,10 +4,9 @@ const types = @import("vdr_types.zig");
 
 const vdr_arena = @import("vdr_arena.zig");
 const resetable_memory = @import("resetable_memory.zig");
-
 const vdr_http = @import("vdr_http.zig");
-
 const compact_loader = @import("vdr_compact_loader.zig");
+const kb_config = @import("vdr_kb_config.zig");
 
 // Types
 const Text = @import("text_big.zig").Text;
@@ -117,6 +116,14 @@ pub fn main() void {
 }
 
 fn load_kbs(global_arena: *types.Arena) void {
+    std.debug.print("\n=== Loading KB config ===\n", .{});
+
+    // Load or create kb.json mapping
+    const config = kb_config.loadKbConfig(global_arena) orelse {
+        std.debug.print("fatal: cannot allocate kb config\n", .{});
+        return;
+    };
+
     std.debug.print("\n=== Loading compact files ===\n", .{});
 
     const dir_path = "data/kb_raw";
@@ -132,23 +139,33 @@ fn load_kbs(global_arena: *types.Arena) void {
     var total_bytes: usize = 0;
     var files_loaded: usize = 0;
     var files_skipped: usize = 0;
+    var new_entries: usize = 0;
 
     var iter = dir.iterate();
     while (iter.next() catch null) |entry| {
         if (entry.kind != .file) continue;
 
-        // Check .md extension
         const name = entry.name;
         if (name.len < 4) continue;
         if (!std.mem.eql(u8, name[name.len - 3 ..], ".md")) continue;
 
-        // Build full path: dir_path / name
+        // Build full path
         var path_buf: [512]u8 = undefined;
         const prefix = dir_path ++ "/";
         if (prefix.len + name.len > 512) continue;
         @memcpy(path_buf[0..prefix.len], prefix);
         @memcpy(path_buf[prefix.len .. prefix.len + name.len], name);
         const full_path = path_buf[0 .. prefix.len + name.len];
+
+        // Check if this file has a mount point in kb.json
+        if (config.dottedPathFor(full_path)) |dotted| {
+            std.debug.print("kb_config: {s} -> {s}\n", .{ full_path, dotted });
+        } else {
+            // New file — assign root.N placeholder
+            _ = config.addUnmapped(full_path);
+            new_entries += 1;
+            std.debug.print("kb_config: NEW {s} -> root.{}\n", .{ full_path, config.next_unmapped - 1 });
+        }
 
         if (compact_loader.loadCompactFile(global_arena, full_path)) |result| {
             compact_loader.printLoadStats(result);
@@ -161,6 +178,12 @@ fn load_kbs(global_arena: *types.Arena) void {
             std.debug.print("compact_loader: FAILED to load '{s}'\n", .{full_path});
             files_skipped += 1;
         }
+    }
+
+    // Save updated kb.json if we added new entries
+    if (new_entries > 0) {
+        kb_config.saveKbConfig(config);
+        std.debug.print("kb_config: added {} new entries to kb.json\n", .{new_entries});
     }
 
     std.debug.print("\n=== Compact Loading Summary ===\n", .{});
