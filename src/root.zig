@@ -540,7 +540,7 @@ fn setTextColumn(kbdata: *types.KBData, col_index: usize, value: types.KBDataVal
     }
 }
 
-fn getVdrValue(config: *kb_config.KbConfig, id: types.VdrId) types.VdrValue {
+pub fn getVdrValue(config: *kb_config.KbConfig, id: types.VdrId) types.VdrValue {
     if (id.isNone()) return types.VdrValue.failed();
 
     const s = id.structural();

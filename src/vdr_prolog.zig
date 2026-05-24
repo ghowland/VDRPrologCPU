@@ -10,6 +10,7 @@ const std = @import("std");
 const types = @import("vdr_types.zig");
 const kb_config = @import("vdr_kb_config.zig");
 const compact_loader = @import("vdr_compact_loader.zig");
+const root = @import("root.zig");
 
 const RelationType = types.RelationType;
 
@@ -296,15 +297,66 @@ pub fn queryAllRelations(
 // Print helpers
 // ============================================================
 
-fn printQueryResult(result: *const QueryResult, label: []const u8) void {
+fn printQueryResult(
+    result: *const QueryResult,
+    label: []const u8,
+    load_result: *const compact_loader.LoadResult,
+    arena_base: [*]u8,
+    kb: *types.KB,
+    config: *kb_config.KbConfig,
+) void {
     std.debug.print("  {s}: {} results\n", .{ label, result.count });
     for (0..result.count) |i| {
-        std.debug.print("    {s} --{s}--> {s}\n", .{
+        var from_buf: [64]u8 = undefined;
+        var to_buf: [64]u8 = undefined;
+        const from_text = entityDescription(load_result, arena_base, kb, config, result.fromSlice(i), &from_buf);
+        const to_text = entityDescription(load_result, arena_base, kb, config, result.toSlice(i), &to_buf);
+
+        std.debug.print("    {s} ({s}) --{s}--> {s} ({s})\n", .{
             result.fromSlice(i),
+            from_text,
             @tagName(result.rel_types[i]),
             result.toSlice(i),
+            to_text,
         });
     }
+}
+
+fn entityDescription(
+    load_result: *const compact_loader.LoadResult,
+    arena_base: [*]u8,
+    kb: *types.KB,
+    config: *kb_config.KbConfig,
+    entity_id: []const u8,
+    out_buf: []u8,
+) []const u8 {
+    const data_list = kb.data orelse return "?";
+
+    var running: usize = 0;
+    for (0..load_result.table_count) |ti| {
+        const table = &load_result.tables[ti];
+        for (0..table.row_count) |ri| {
+            const eid = table.entityId(ri, arena_base);
+            if (std.mem.eql(u8, eid, entity_id)) {
+                if (running >= data_list.items.len) return "?";
+                const vdr_id = data_list.items[running].id;
+                const val = root.getVdrValue(config, vdr_id);
+                if (val.ok and val.data != null) {
+                    if (val.data.?.text_column_0) |c0| {
+                        if (c0.text) |t| {
+                            const len = @min(t.len, out_buf.len);
+                            @memcpy(out_buf[0..len], t.text[0..len]);
+                            return out_buf[0..len];
+                        }
+                    }
+                }
+                return "?";
+            }
+            running += 1;
+        }
+    }
+
+    return "?";
 }
 
 // ============================================================
@@ -315,7 +367,7 @@ pub fn testProlog(
     global_arena: *types.Arena,
     config: *kb_config.KbConfig,
 ) void {
-    _ = global_arena;
+    // _ = global_arena;
     std.debug.print("\n=== Prolog Query Test ===\n", .{});
 
     // Find root.engineering.mechanical
@@ -344,13 +396,19 @@ pub fn testProlog(
     var tests_passed: i32 = 0;
     var tests_total: i32 = 0;
 
+    const kb = entry.kb orelse {
+        std.debug.print("  SKIP: KB not created\n", .{});
+        return;
+    };
+
     // ── Test 1: Direct query ──────────────────────────────────
     // "What does EC4 enable?"
     // EC4 (electric motor) enables PM5, PM6, PM7, PM8, PM9
     {
         std.debug.print("  Test 1: What does EC4 enable?\n", .{});
         const result = queryRelation(load_result, undefined, "EC4", .enables);
-        printQueryResult(&result, "EC4 enables");
+        // printQueryResult(&result, "EC4 enables");
+        printQueryResult(&result, "EC4 enables", load_result, global_arena.base, kb, config);
 
         const expected = [_][]const u8{ "PM5", "PM6", "PM7", "PM8", "PM9" };
         var hits: i32 = 0;
@@ -372,7 +430,8 @@ pub fn testProlog(
     {
         std.debug.print("  Test 2: What requires PU6?\n", .{});
         const result = queryRelationReverse(load_result, undefined, "PU6", .requires);
-        printQueryResult(&result, "requires PU6");
+        // printQueryResult(&result, "requires PU6");
+        printQueryResult(&result, "requires PU6", load_result, global_arena.base, kb, config);
 
         const expected = [_][]const u8{ "HS2", "HS3" };
         var hits: i32 = 0;
@@ -394,7 +453,8 @@ pub fn testProlog(
     {
         std.debug.print("  Test 3: What depends_on PM5? (inverse query)\n", .{});
         const result = queryRelationInverse(load_result, undefined, "PM5", .depends_on);
-        printQueryResult(&result, "depends_on PM5 (via enables inverse)");
+        // printQueryResult(&result, "depends_on PM5 (via enables inverse)");
+        printQueryResult(&result, "depends_on PM5 (via enables inverse)", load_result, global_arena.base, kb, config);
 
         // PM5 enables PU1 and CP2
         const expected = [_][]const u8{ "PU1", "CP2" };
@@ -420,7 +480,8 @@ pub fn testProlog(
     {
         std.debug.print("  Test 4: What does EC4 transitively enable?\n", .{});
         const result = queryTransitiveClosure(load_result, undefined, "EC4", .enables);
-        printQueryResult(&result, "EC4 enables (transitive)");
+        // printQueryResult(&result, "EC4 enables (transitive)");
+        printQueryResult(&result, "EC4 enables (transitive)", load_result, global_arena.base, kb, config);
 
         // Must contain direct targets plus at least some chained targets
         var direct_hits: i32 = 0;
@@ -472,7 +533,8 @@ pub fn testProlog(
     {
         std.debug.print("  Test 6: All relations for HS5\n", .{});
         const result = queryAllRelations(load_result, undefined, "HS5");
-        printQueryResult(&result, "HS5 all relations");
+        // printQueryResult(&result, "HS5 all relations");
+        printQueryResult(&result, "HS5 all relations", load_result, global_arena.base, kb, config);
 
         // HS5 requires VL18, SN13, CT6, CC14, PU6
         tests_total += 1;
@@ -490,7 +552,8 @@ pub fn testProlog(
     {
         std.debug.print("  Test 7: Specialization chain VL18 → VL17 → VL16\n", .{});
         const result = queryTransitiveClosure(load_result, undefined, "VL18", .specializes);
-        printQueryResult(&result, "VL18 specializes (transitive)");
+        // printQueryResult(&result, "VL18 specializes (transitive)");
+        printQueryResult(&result, "VL18 specializes (transitive)", load_result, global_arena.base, kb, config);
 
         const found_vl17 = result.containsTo("VL17");
         const found_vl16 = result.containsTo("VL16");
@@ -509,7 +572,8 @@ pub fn testProlog(
     {
         std.debug.print("  Test 8: What is part_of DM2?\n", .{});
         const result = queryRelationReverse(load_result, undefined, "DM2", .part_of);
-        printQueryResult(&result, "part_of DM2");
+        // printQueryResult(&result, "part_of DM2");
+        printQueryResult(&result, "part_of DM2", load_result, global_arena.base, kb, config);
 
         const expected = [_][]const u8{ "GR1", "GR2", "GR7" };
         var hits: i32 = 0;

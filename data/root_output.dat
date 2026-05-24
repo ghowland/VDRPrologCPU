@@ -1,0 +1,1951 @@
+VDR-Prolog kernel starting
+=== SystemConfig ===
+  n_cores:                        4
+  http_port:                      1138
+  global_arena_bytes:             1073741824
+  per_core_arena_bytes:           234881024
+  max_total_kbs:                  100000
+  max_total_facts:                10000000
+  max_total_rules:                100000
+  max_total_terms:                1000000
+  max_sessions_per_core:          500
+  max_ephemeral_kbs_per_session:  1000
+  max_facts_per_session_kb:       10000
+  default_max_turns:              0
+  auto_snapshot_interval:         100
+  max_runners:                    64
+  audit_ring_capacity:            1000000
+  default_visibility:             1
+  relation_index_rebuild_interval:100
+  model.n_layers:                 16
+  model.d_model:                  2048
+  model.n_heads:                  16
+  model.d_head:                   128
+  model.vocab_size:               32000
+  model.mlp_dim:                  5632
+  model.max_seq_len:              2048
+  model.totalParams:              768737280
+  model.weightBytes:              1537474560
+  sampling.mode:                  0
+  sampling.temperature_v:         65536
+  sampling.top_k:                 50
+  sampling.top_p_v:               58982
+  prolog.max_depth:               100
+  prolog.max_bindings:            1000
+  prolog.max_results:             100
+  prolog.max_inheritance_depth:   32
+=== Global Arena ===
+  size:  1073741824 bytes
+  used:  0 bytes
+  free:  1073741824 bytes
+=== Resetable Memory ===
+  size:  1048576 bytes
+  used:  0 bytes
+  free:  1048576 bytes
+=== config loaded OK ===
+VDR-Prolog kernel ready
+
+=== Loading KB config ===
+kb_config: loaded 59 entries from kb.json
+
+=== Loading compact files ===
+kb_config: data/kb_raw/animal_husbandry.md -> root.trades.animal_husbandry
+
+=== Compact Load: data/kb_raw/animal_husbandry.md ===
+  file size:       80510 bytes
+  tables:          13
+  total rows:      177
+  skipped rows:    0
+  relationships:   274
+  rel mappings:    32
+  arena text used: 925340 bytes
+  table 'concepts': 4 cols, 40 rows
+  table 'species': 8 cols, 9 rows
+  table 'lifecycle': 9 cols, 17 rows
+  table 'nutrition': 8 cols, 16 rows
+  table 'housing': 9 cols, 6 rows
+  table 'health': 7 cols, 13 rows
+  table 'behavior': 5 cols, 13 rows
+  table 'breeding': 5 cols, 16 rows
+  table 'products': 7 cols, 8 rows
+  table 'daily_routines': 7 cols, 11 rows
+  table 'seasonal': 7 cols, 10 rows
+  table 'failure_modes': 6 cols, 10 rows
+  table 'distinctions': 4 cols, 8 rows
+  relations resolved: 274, unresolved: 0
+kb_config: data/kb_raw/architecture.md -> root.engineering.architecture
+
+=== Compact Load: data/kb_raw/architecture.md ===
+  file size:       35404 bytes
+  tables:          12
+  total rows:      239
+  skipped rows:    0
+  relationships:   205
+  rel mappings:    12
+  arena text used: 816258 bytes
+  table 'vertical_zones': 5 cols, 7 rows
+  table 'structural_systems': 6 cols, 15 rows
+  table 'arch_types': 7 cols, 15 rows
+  table 'column_orders': 7 cols, 8 rows
+  table 'roof_forms': 6 cols, 13 rows
+  table 'elements': 6 cols, 52 rows
+  table 'openings': 6 cols, 16 rows
+  table 'spatial_concepts': 4 cols, 24 rows
+  table 'ornament_types': 6 cols, 32 rows
+  table 'building_types': 6 cols, 26 rows
+  table 'rules': 5 cols, 20 rows
+  table 'section_index': 3 cols, 11 rows
+  relations resolved: 204, unresolved: 1
+    unresolved: 'limited_by' (SS1 -> EL16)
+kb_config: data/kb_raw/art_drawing_painting.md -> root.literature.art
+
+=== Compact Load: data/kb_raw/art_drawing_painting.md ===
+  file size:       78405 bytes
+  tables:          15
+  total rows:      160
+  skipped rows:    0
+  relationships:   271
+  rel mappings:    42
+  arena text used: 1053996 bytes
+  table 'concepts': 4 cols, 21 rows
+  table 'elements': 5 cols, 8 rows
+  table 'principles': 5 cols, 8 rows
+  table 'color': 5 cols, 12 rows
+  table 'drawing': 5 cols, 11 rows
+  table 'painting': 5 cols, 12 rows
+  table 'figure': 5 cols, 10 rows
+  table 'composition': 5 cols, 10 rows
+  table 'perspective': 5 cols, 8 rows
+  table 'materials': 6 cols, 13 rows
+  table 'techniques': 5 cols, 12 rows
+  table 'genres': 5 cols, 6 rows
+  table 'observation': 5 cols, 7 rows
+  table 'failure_modes': 6 cols, 12 rows
+  table 'distinctions': 4 cols, 10 rows
+  relations resolved: 271, unresolved: 0
+kb_config: data/kb_raw/astronomy.md -> root.edu.astronomy
+
+=== Compact Load: data/kb_raw/astronomy.md ===
+  file size:       63158 bytes
+  tables:          15
+  total rows:      116
+  skipped rows:    0
+  relationships:   134
+  rel mappings:    9
+  arena text used: 1037685 bytes
+  table 'domains': 3 cols, 8 rows
+  table 'electromagnetic_spectrum': 9 cols, 6 rows
+  table 'stellar_properties': 7 cols, 7 rows
+  table 'stellar_classification': 11 cols, 10 rows
+  table 'stellar_evolution': 9 cols, 9 rows
+  table 'stellar_remnants': 10 cols, 3 rows
+  table 'exoplanets': 9 cols, 4 rows
+  table 'galactic_structure': 8 cols, 4 rows
+  table 'galaxy_types': 10 cols, 5 rows
+  table 'cosmology': 7 cols, 7 rows
+  table 'cosmic_distance': 7 cols, 8 rows
+  table 'gravitational_waves': 9 cols, 4 rows
+  table 'constants': 6 cols, 12 rows
+  table 'concepts': 4 cols, 14 rows
+  table 'section_index': 3 cols, 15 rows
+  relations resolved: 134, unresolved: 0
+kb_config: data/kb_raw/basic_fabrication_production.md -> root.trades.fabrication
+
+=== Compact Load: data/kb_raw/basic_fabrication_production.md ===
+  file size:       75410 bytes
+  tables:          9
+  total rows:      203
+  skipped rows:    0
+  relationships:   256
+  rel mappings:    21
+  arena text used: 658874 bytes
+  table 'concepts': 4 cols, 37 rows
+  table 'materials': 6 cols, 25 rows
+  table 'tools': 5 cols, 37 rows
+  table 'processes': 8 cols, 30 rows
+  table 'products': 7 cols, 20 rows
+  table 'recipes': 7 cols, 9 rows
+  table 'failure_modes': 6 cols, 20 rows
+  table 'safety': 5 cols, 10 rows
+  table 'distinctions': 4 cols, 15 rows
+  relations resolved: 256, unresolved: 0
+kb_config: data/kb_raw/biology.md -> root.edu.biology
+
+=== Compact Load: data/kb_raw/biology.md ===
+  file size:       67583 bytes
+  tables:          15
+  total rows:      111
+  skipped rows:    0
+  relationships:   166
+  rel mappings:    8
+  arena text used: 1042661 bytes
+  table 'domains': 3 cols, 9 rows
+  table 'biochemistry': 7 cols, 9 rows
+  table 'cell_structure': 8 cols, 8 rows
+  table 'cell_membrane': 8 cols, 6 rows
+  table 'gene_expression': 9 cols, 4 rows
+  table 'cell_signaling': 8 cols, 6 rows
+  table 'genetics': 7 cols, 5 rows
+  table 'evolution': 7 cols, 4 rows
+  table 'taxonomy': 6 cols, 3 rows
+  table 'ecology': 7 cols, 4 rows
+  table 'metabolism': 9 cols, 7 rows
+  table 'cell_cycle': 8 cols, 10 rows
+  table 'immunology': 9 cols, 3 rows
+  table 'concepts': 4 cols, 18 rows
+  table 'section_index': 3 cols, 15 rows
+  relations resolved: 166, unresolved: 0
+kb_config: data/kb_raw/blacksmithing.md -> root.trades.blacksmithing
+
+=== Compact Load: data/kb_raw/blacksmithing.md ===
+  file size:       73706 bytes
+  tables:          12
+  total rows:      116
+  skipped rows:    0
+  relationships:   258
+  rel mappings:    44
+  arena text used: 851859 bytes
+  table 'concepts': 4 cols, 15 rows
+  table 'materials': 6 cols, 9 rows
+  table 'tools': 6 cols, 20 rows
+  table 'fire_management': 5 cols, 6 rows
+  table 'techniques': 6 cols, 12 rows
+  table 'joinery': 6 cols, 6 rows
+  table 'heat_treatment': 6 cols, 6 rows
+  table 'projects': 6 cols, 10 rows
+  table 'measurement': 5 cols, 5 rows
+  table 'safety': 5 cols, 7 rows
+  table 'failure_modes': 6 cols, 10 rows
+  table 'distinctions': 4 cols, 10 rows
+  relations resolved: 250, unresolved: 8
+    unresolved: 'affected_by' (CO5 -> CO2)
+    unresolved: 'affected_by' (CO5 -> CO4)
+    unresolved: 'affected_by' (CO5 -> CO9)
+    unresolved: 'determines' (CO8 -> HT1)
+    unresolved: 'determines' (CO8 -> HT3)
+    ... and 3 more
+kb_config: data/kb_raw/body_mechanics.md -> root.edu.body_mechanics
+
+=== Compact Load: data/kb_raw/body_mechanics.md ===
+  file size:       65156 bytes
+  tables:          13
+  total rows:      253
+  skipped rows:    0
+  relationships:   302
+  rel mappings:    45
+  arena text used: 908369 bytes
+  table 'concepts': 4 cols, 73 rows
+  table 'systems': 5 cols, 8 rows
+  table 'muscles': 7 cols, 35 rows
+  table 'movement_patterns': 6 cols, 19 rows
+  table 'energy_systems': 8 cols, 5 rows
+  table 'biomechanical_principles': 5 cols, 15 rows
+  table 'athletic_qualities': 6 cols, 17 rows
+  table 'training_methods': 6 cols, 20 rows
+  table 'periodization': 5 cols, 7 rows
+  table 'recovery': 6 cols, 10 rows
+  table 'injury_modes': 6 cols, 12 rows
+  table 'assessments': 5 cols, 12 rows
+  table 'distinctions': 4 cols, 20 rows
+  relations resolved: 302, unresolved: 0
+kb_config: data/kb_raw/business_accounting_finances.md -> root.business.accounting
+
+=== Compact Load: data/kb_raw/business_accounting_finances.md ===
+  file size:       62731 bytes
+  tables:          14
+  total rows:      176
+  skipped rows:    0
+  relationships:   211
+  rel mappings:    52
+  arena text used: 971919 bytes
+  table 'concepts': 4 cols, 42 rows
+  table 'accounts': 7 cols, 11 rows
+  table 'double_entry': 5 cols, 8 rows
+  table 'financial_statements': 6 cols, 5 rows
+  table 'transactions': 6 cols, 22 rows
+  table 'ratios': 6 cols, 18 rows
+  table 'tax': 5 cols, 7 rows
+  table 'payroll': 5 cols, 10 rows
+  table 'cash_management': 5 cols, 8 rows
+  table 'budgeting': 5 cols, 7 rows
+  table 'controls': 5 cols, 10 rows
+  table 'compliance': 5 cols, 6 rows
+  table 'failure_modes': 6 cols, 10 rows
+  table 'distinctions': 4 cols, 12 rows
+  relations resolved: 211, unresolved: 0
+kb_config: data/kb_raw/camping_hiking_outdoors.md -> root.trades.camping
+
+=== Compact Load: data/kb_raw/camping_hiking_outdoors.md ===
+  file size:       73122 bytes
+  tables:          22
+  total rows:      217
+  skipped rows:    0
+  relationships:   187
+  rel mappings:    9
+  arena text used: 1508043 bytes
+  table 'domains': 3 cols, 15 rows
+  table 'shelter': 12 cols, 8 rows
+  table 'sleep_systems': 12 cols, 8 rows
+  table 'water': 10 cols, 9 rows
+  table 'fire': 8 cols, 11 rows
+  table 'food_and_cooking': 9 cols, 11 rows
+  table 'navigation': 9 cols, 6 rows
+  table 'clothing': 10 cols, 16 rows
+  table 'footwear': 10 cols, 8 rows
+  table 'packing': 9 cols, 6 rows
+  table 'terrain': 8 cols, 8 rows
+  table 'weather': 6 cols, 8 rows
+  table 'hazards': 7 cols, 12 rows
+  table 'first_aid': 7 cols, 7 rows
+  table 'knots': 7 cols, 9 rows
+  table 'tools': 6 cols, 9 rows
+  table 'hygiene': 6 cols, 6 rows
+  table 'planning': 6 cols, 8 rows
+  table 'signals': 7 cols, 7 rows
+  table 'flora_fauna_awareness': 7 cols, 8 rows
+  table 'concepts': 4 cols, 15 rows
+  table 'section_index': 3 cols, 22 rows
+  relations resolved: 187, unresolved: 0
+kb_config: data/kb_raw/chemistry.md -> root.edu.chemistry
+
+=== Compact Load: data/kb_raw/chemistry.md ===
+  file size:       66390 bytes
+  tables:          18
+  total rows:      147
+  skipped rows:    0
+  relationships:   168
+  rel mappings:    59
+  arena text used: 1237419 bytes
+  table 'concepts': 4 cols, 16 rows
+  table 'atomic_structure': 5 cols, 8 rows
+  table 'periodic_trends': 6 cols, 6 rows
+  table 'bonding': 5 cols, 12 rows
+  table 'states_of_matter': 5 cols, 5 rows
+  table 'reactions': 5 cols, 10 rows
+  table 'stoichiometry': 5 cols, 7 rows
+  table 'thermodynamics': 5 cols, 7 rows
+  table 'kinetics': 5 cols, 7 rows
+  table 'equilibrium': 5 cols, 5 rows
+  table 'acids_bases': 5 cols, 7 rows
+  table 'electrochemistry': 5 cols, 7 rows
+  table 'organic': 5 cols, 12 rows
+  table 'solutions': 5 cols, 5 rows
+  table 'nuclear': 5 cols, 5 rows
+  table 'laboratory': 5 cols, 7 rows
+  table 'failure_modes': 6 cols, 9 rows
+  table 'distinctions': 4 cols, 12 rows
+  relations resolved: 166, unresolved: 2
+    unresolved: 'simplest' (OR1 -> OR12)
+    unresolved: 'stabilized_by' (OR9 -> BO2)
+kb_config: data/kb_raw/climate.md -> root.edu.climate
+
+=== Compact Load: data/kb_raw/climate.md ===
+  file size:       79969 bytes
+  tables:          15
+  total rows:      151
+  skipped rows:    0
+  relationships:   203
+  rel mappings:    48
+  arena text used: 1054192 bytes
+  table 'concepts': 4 cols, 25 rows
+  table 'energy_budget': 5 cols, 11 rows
+  table 'atmospheric_structure': 6 cols, 7 rows
+  table 'circulation': 5 cols, 13 rows
+  table 'water_cycle': 5 cols, 8 rows
+  table 'ocean': 5 cols, 8 rows
+  table 'regional_climates': 6 cols, 14 rows
+  table 'local_effects': 5 cols, 9 rows
+  table 'feedback_mechanisms': 6 cols, 8 rows
+  table 'variability': 6 cols, 9 rows
+  table 'paleoclimate': 6 cols, 6 rows
+  table 'biome_climate': 6 cols, 8 rows
+  table 'measurement': 5 cols, 6 rows
+  table 'failure_modes': 6 cols, 7 rows
+  table 'distinctions': 4 cols, 12 rows
+  relations resolved: 203, unresolved: 0
+kb_config: data/kb_raw/cognition_understanding_thinking.md -> root.edu.cognition
+
+=== Compact Load: data/kb_raw/cognition_understanding_thinking.md ===
+  file size:       64155 bytes
+  tables:          18
+  total rows:      203
+  skipped rows:    0
+  relationships:   280
+  rel mappings:    19
+  arena text used: 1236178 bytes
+  table 'foundations': 4 cols, 20 rows
+  table 'processes': 7 cols, 20 rows
+  table 'awareness_types': 6 cols, 10 rows
+  table 'memory_systems': 7 cols, 10 rows
+  table 'attention': 6 cols, 10 rows
+  table 'reasoning': 6 cols, 12 rows
+  table 'understanding': 6 cols, 12 rows
+  table 'mental_models': 6 cols, 9 rows
+  table 'metacognition': 6 cols, 8 rows
+  table 'biases': 6 cols, 15 rows
+  table 'development': 6 cols, 8 rows
+  table 'disorders': 6 cols, 10 rows
+  table 'measurement': 6 cols, 10 rows
+  table 'embodied': 5 cols, 7 rows
+  table 'social_cognition': 6 cols, 8 rows
+  table 'comparative': 5 cols, 6 rows
+  table 'rules': 4 cols, 11 rows
+  table 'section_index': 3 cols, 17 rows
+  relations resolved: 280, unresolved: 0
+kb_config: data/kb_raw/connections.md -> root.language.connections
+
+=== Compact Load: data/kb_raw/connections.md ===
+  file size:       65378 bytes
+  tables:          15
+  total rows:      208
+  skipped rows:    0
+  relationships:   245
+  rel mappings:    38
+  arena text used: 1040340 bytes
+  table 'concepts': 4 cols, 23 rows
+  table 'spatial': 5 cols, 17 rows
+  table 'temporal': 5 cols, 12 rows
+  table 'structural': 5 cols, 16 rows
+  table 'causal': 5 cols, 11 rows
+  table 'informational': 5 cols, 18 rows
+  table 'social': 5 cols, 16 rows
+  table 'functional': 5 cols, 14 rows
+  table 'logical': 5 cols, 12 rows
+  table 'identity': 5 cols, 7 rows
+  table 'network': 5 cols, 12 rows
+  table 'channel': 8 cols, 12 rows
+  table 'protocol': 6 cols, 12 rows
+  table 'failure_modes': 6 cols, 12 rows
+  table 'distinctions': 4 cols, 14 rows
+  relations resolved: 245, unresolved: 0
+kb_config: data/kb_raw/construction_building_home.md -> root.engineering.construction
+
+=== Compact Load: data/kb_raw/construction_building_home.md ===
+  file size:       76331 bytes
+  tables:          19
+  total rows:      150
+  skipped rows:    0
+  relationships:   150
+  rel mappings:    11
+  arena text used: 1313431 bytes
+  table 'domains': 3 cols, 10 rows
+  table 'foundation': 11 cols, 6 rows
+  table 'framing': 10 cols, 9 rows
+  table 'sheathing_and_wrap': 8 cols, 6 rows
+  table 'roofing': 10 cols, 7 rows
+  table 'exterior_cladding': 10 cols, 6 rows
+  table 'windows_doors': 9 cols, 6 rows
+  table 'insulation': 10 cols, 8 rows
+  table 'air_sealing': 8 cols, 6 rows
+  table 'hvac': 10 cols, 7 rows
+  table 'plumbing': 10 cols, 6 rows
+  table 'electrical': 7 cols, 9 rows
+  table 'concrete': 10 cols, 4 rows
+  table 'fasteners': 8 cols, 7 rows
+  table 'structural_loads': 7 cols, 7 rows
+  table 'moisture_management': 7 cols, 7 rows
+  table 'energy_efficiency': 8 cols, 5 rows
+  table 'concepts': 4 cols, 15 rows
+  table 'section_index': 3 cols, 19 rows
+  relations resolved: 150, unresolved: 0
+kb_config: data/kb_raw/cooking_basic.md -> root.trades.cooking
+
+=== Compact Load: data/kb_raw/cooking_basic.md ===
+  file size:       84645 bytes
+  tables:          16
+  total rows:      164
+  skipped rows:    0
+  relationships:   192
+  rel mappings:    21
+  arena text used: 1127813 bytes
+  table 'concepts': 4 cols, 18 rows
+  table 'ingredients': 6 cols, 30 rows
+  table 'flavor_principles': 5 cols, 12 rows
+  table 'techniques': 6 cols, 22 rows
+  table 'mother_preparations': 6 cols, 8 rows
+  table 'doughs': 6 cols, 6 rows
+  table 'sauces': 6 cols, 10 rows
+  table 'soups_stews': 6 cols, 4 rows
+  table 'grains_legumes': 6 cols, 6 rows
+  table 'egg_preparations': 6 cols, 6 rows
+  table 'vegetable_methods': 6 cols, 5 rows
+  table 'meat_methods': 6 cols, 4 rows
+  table 'preservation': 6 cols, 5 rows
+  table 'recipes': 7 cols, 8 rows
+  table 'failure_modes': 6 cols, 10 rows
+  table 'distinctions': 4 cols, 10 rows
+  relations resolved: 192, unresolved: 0
+kb_config: data/kb_raw/databases.md -> root.programming.databases
+
+=== Compact Load: data/kb_raw/databases.md ===
+  file size:       78696 bytes
+  tables:          15
+  total rows:      147
+  skipped rows:    0
+  relationships:   178
+  rel mappings:    58
+  arena text used: 1052591 bytes
+  table 'concepts': 4 cols, 26 rows
+  table 'data_model': 6 cols, 6 rows
+  table 'normalization': 6 cols, 6 rows
+  table 'schema_design': 5 cols, 13 rows
+  table 'storage': 5 cols, 12 rows
+  table 'indexing': 6 cols, 10 rows
+  table 'query_processing': 5 cols, 10 rows
+  table 'transactions': 5 cols, 6 rows
+  table 'concurrency': 5 cols, 7 rows
+  table 'journaling': 5 cols, 6 rows
+  table 'replication': 5 cols, 8 rows
+  table 'partitioning': 5 cols, 5 rows
+  table 'consistency': 5 cols, 6 rows
+  table 'failure_modes': 6 cols, 12 rows
+  table 'distinctions': 4 cols, 14 rows
+  relations resolved: 177, unresolved: 1
+    unresolved: 'strengthens' (RP7 -> RP1)
+kb_config: data/kb_raw/dramatic_writing.md -> root.literature.dramatic_writing
+
+=== Compact Load: data/kb_raw/dramatic_writing.md ===
+  file size:       70928 bytes
+  tables:          14
+  total rows:      145
+  skipped rows:    0
+  relationships:   185
+  rel mappings:    77
+  arena text used: 979342 bytes
+  table 'concepts': 4 cols, 22 rows
+  table 'story_structure': 6 cols, 12 rows
+  table 'character': 5 cols, 15 rows
+  table 'plot': 5 cols, 15 rows
+  table 'dialogue': 5 cols, 8 rows
+  table 'prose': 5 cols, 10 rows
+  table 'point_of_view': 6 cols, 6 rows
+  table 'theme': 5 cols, 6 rows
+  table 'genre': 5 cols, 9 rows
+  table 'tension': 5 cols, 8 rows
+  table 'world': 5 cols, 5 rows
+  table 'revision': 5 cols, 7 rows
+  table 'failure_modes': 6 cols, 12 rows
+  table 'distinctions': 4 cols, 10 rows
+  relations resolved: 185, unresolved: 0
+kb_config: data/kb_raw/economics.md -> root.edu.economics
+
+=== Compact Load: data/kb_raw/economics.md ===
+  file size:       65250 bytes
+  tables:          10
+  total rows:      243
+  skipped rows:    0
+  relationships:   317
+  rel mappings:    68
+  arena text used: 710436 bytes
+  table 'concepts': 4 cols, 100 rows
+  table 'schools': 6 cols, 14 rows
+  table 'thinkers': 4 cols, 27 rows
+  table 'models': 6 cols, 15 rows
+  table 'market_structures': 8 cols, 6 rows
+  table 'policy_instruments': 6 cols, 17 rows
+  table 'indicators': 5 cols, 19 rows
+  table 'institutions': 5 cols, 10 rows
+  table 'claims': 5 cols, 18 rows
+  table 'distinctions': 4 cols, 17 rows
+  relations resolved: 316, unresolved: 1
+    unresolved: 'increases' (CO41 -> CO63)
+kb_config: data/kb_raw/electronics_foundation.md -> root.engineering.electronics
+
+=== Compact Load: data/kb_raw/electronics_foundation.md ===
+  file size:       84311 bytes
+  tables:          26
+  total rows:      280
+  skipped rows:    0
+  relationships:   227
+  rel mappings:    83
+  arena text used: 1774907 bytes
+  table 'domains': 6 cols, 8 rows
+  table 'fundamentals': 7 cols, 20 rows
+  table 'passive_components': 10 cols, 9 rows
+  table 'semiconductor_devices': 7 cols, 15 rows
+  table 'active_components': 6 cols, 14 rows
+  table 'optoelectronics': 6 cols, 8 rows
+  table 'power_electronics': 8 cols, 12 rows
+  table 'signal_types': 6 cols, 8 rows
+  table 'circuit_topologies': 8 cols, 10 rows
+  table 'filters': 8 cols, 10 rows
+  table 'amplifier_topologies': 8 cols, 9 rows
+  table 'oscillators': 8 cols, 8 rows
+  table 'modulation': 8 cols, 10 rows
+  table 'digital_foundations': 7 cols, 9 rows
+  table 'logic_families': 11 cols, 8 rows
+  table 'memory': 10 cols, 8 rows
+  table 'microcontrollers': 10 cols, 8 rows
+  table 'communication_interfaces': 10 cols, 10 rows
+  table 'power_supply': 7 cols, 6 rows
+  table 'pcb': 6 cols, 10 rows
+  table 'test_equipment': 6 cols, 9 rows
+  table 'units_constants': 6 cols, 12 rows
+  table 'failure_modes': 6 cols, 9 rows
+  table 'safety': 5 cols, 6 rows
+  table 'concepts': 4 cols, 18 rows
+  table 'section_index': 3 cols, 26 rows
+  relations resolved: 227, unresolved: 0
+kb_config: data/kb_raw/electronics_power_grid.md -> root.engineering.power_grid
+
+=== Compact Load: data/kb_raw/electronics_power_grid.md ===
+  file size:       79606 bytes
+  tables:          19
+  total rows:      143
+  skipped rows:    0
+  relationships:   172
+  rel mappings:    15
+  arena text used: 1314527 bytes
+  table 'domains': 3 cols, 9 rows
+  table 'generation': 12 cols, 12 rows
+  table 'transmission': 11 cols, 5 rows
+  table 'substations': 8 cols, 5 rows
+  table 'transformers': 10 cols, 5 rows
+  table 'switchgear': 9 cols, 5 rows
+  table 'protection': 8 cols, 8 rows
+  table 'conductors': 9 cols, 6 rows
+  table 'power_electronics_grid': 8 cols, 6 rows
+  table 'energy_storage': 11 cols, 7 rows
+  table 'grid_control': 7 cols, 7 rows
+  table 'reliability': 7 cols, 4 rows
+  table 'power_quality': 8 cols, 6 rows
+  table 'renewable_integration': 7 cols, 6 rows
+  table 'markets': 8 cols, 6 rows
+  table 'load_types': 8 cols, 5 rows
+  table 'failure_modes': 7 cols, 7 rows
+  table 'concepts': 4 cols, 15 rows
+  table 'section_index': 3 cols, 19 rows
+  relations resolved: 172, unresolved: 0
+kb_config: data/kb_raw/electronics_radio_cellural.md -> root.engineering.radio_cellular
+
+=== Compact Load: data/kb_raw/electronics_radio_cellural.md ===
+  file size:       65869 bytes
+  tables:          15
+  total rows:      194
+  skipped rows:    0
+  relationships:   221
+  rel mappings:    39
+  arena text used: 1040945 bytes
+  table 'concepts': 4 cols, 25 rows
+  table 'electromagnetic': 7 cols, 10 rows
+  table 'propagation': 6 cols, 13 rows
+  table 'modulation': 7 cols, 16 rows
+  table 'antenna': 8 cols, 12 rows
+  table 'analog_systems': 8 cols, 6 rows
+  table 'digital_systems': 9 cols, 12 rows
+  table 'cellular_generations': 10 cols, 13 rows
+  table 'cellular_architecture': 5 cols, 13 rows
+  table 'protocols': 6 cols, 13 rows
+  table 'spectrum': 4 cols, 10 rows
+  table 'components': 5 cols, 14 rows
+  table 'signal_processing': 5 cols, 15 rows
+  table 'failure_modes': 6 cols, 11 rows
+  table 'distinctions': 4 cols, 11 rows
+  relations resolved: 221, unresolved: 0
+kb_config: data/kb_raw/english_grammar.md -> root.language.english_grammar
+
+=== Compact Load: data/kb_raw/english_grammar.md ===
+  file size:       29013 bytes
+  tables:          13
+  total rows:      224
+  skipped rows:    0
+  relationships:   198
+  rel mappings:    14
+  arena text used: 875020 bytes
+  table 'word_classes': 5 cols, 10 rows
+  table 'subclasses': 5 cols, 43 rows
+  table 'morphology': 5 cols, 16 rows
+  table 'concepts': 4 cols, 46 rows
+  table 'phrase_types': 6 cols, 5 rows
+  table 'clause_types': 5 cols, 14 rows
+  table 'sentence_patterns': 5 cols, 7 rows
+  table 'agreement': 5 cols, 11 rows
+  table 'tense_aspect': 6 cols, 12 rows
+  table 'voice_mood': 5 cols, 9 rows
+  table 'punctuation': 5 cols, 15 rows
+  table 'rules': 4 cols, 24 rows
+  table 'section_index': 3 cols, 12 rows
+  relations resolved: 198, unresolved: 0
+kb_config: data/kb_raw/english_phrasing.md -> root.language.english_phrasing
+
+=== Compact Load: data/kb_raw/english_phrasing.md ===
+  file size:       59628 bytes
+  tables:          17
+  total rows:      203
+  skipped rows:    0
+  relationships:   206
+  rel mappings:    12
+  arena text used: 1166016 bytes
+  table 'domains': 3 cols, 8 rows
+  table 'constructions': 7 cols, 20 rows
+  table 'argument_roles': 6 cols, 14 rows
+  table 'slot_constraints': 8 cols, 17 rows
+  table 'phrase_patterns': 7 cols, 11 rows
+  table 'information_structure': 6 cols, 9 rows
+  table 'discourse_functions': 6 cols, 10 rows
+  table 'pragmatic_markers': 6 cols, 12 rows
+  table 'collocations': 7 cols, 11 rows
+  table 'idiom_patterns': 8 cols, 6 rows
+  table 'register_patterns': 7 cols, 7 rows
+  table 'metaphor_frames': 6 cols, 10 rows
+  table 'speech_acts': 7 cols, 11 rows
+  table 'coherence_relations': 6 cols, 12 rows
+  table 'prosodic_patterns': 6 cols, 10 rows
+  table 'concepts': 4 cols, 18 rows
+  table 'section_index': 3 cols, 17 rows
+  relations resolved: 206, unresolved: 0
+kb_config: data/kb_raw/english_vocabulary.md -> root.language.english_vocabulary
+
+=== Compact Load: data/kb_raw/english_vocabulary.md ===
+  file size:       23181 bytes
+  tables:          8
+  total rows:      313
+  skipped rows:    0
+  relationships:   209
+  rel mappings:    6
+  arena text used: 543860 bytes
+  table 'frequency_tiers': 4 cols, 6 rows
+  table 'etymology_layers': 5 cols, 6 rows
+  table 'register_tiers': 5 cols, 5 rows
+  table 'word_formation': 5 cols, 11 rows
+  table 'semantic_fields': 4 cols, 18 rows
+  table 'affixes': 6 cols, 36 rows
+  table 'core_words': 7 cols, 220 rows
+  table 'section_index': 3 cols, 11 rows
+  relations resolved: 209, unresolved: 0
+kb_config: data/kb_raw/finite_state_machines.md -> root.programming.fsm
+
+=== Compact Load: data/kb_raw/finite_state_machines.md ===
+  file size:       47319 bytes
+  tables:          18
+  total rows:      216
+  skipped rows:    0
+  relationships:   216
+  rel mappings:    19
+  arena text used: 1220000 bytes
+  table 'foundations': 5 cols, 24 rows
+  table 'components': 6 cols, 11 rows
+  table 'machine_types': 7 cols, 10 rows
+  table 'hierarchy': 6 cols, 5 rows
+  table 'closure_properties': 5 cols, 20 rows
+  table 'operations': 6 cols, 10 rows
+  table 'construction_algorithms': 6 cols, 12 rows
+  table 'equivalences': 5 cols, 8 rows
+  table 'minimization': 4 cols, 7 rows
+  table 'pumping_lemmas': 6 cols, 2 rows
+  table 'theorems': 5 cols, 11 rows
+  table 'regular_expressions': 5 cols, 12 rows
+  table 'implementation_patterns': 6 cols, 10 rows
+  table 'extended_models': 6 cols, 10 rows
+  table 'applications': 5 cols, 20 rows
+  table 'design_rules': 4 cols, 15 rows
+  table 'failure_modes': 5 cols, 12 rows
+  table 'section_index': 3 cols, 17 rows
+  relations resolved: 216, unresolved: 0
+kb_config: data/kb_raw/gardening_home.md -> root.trades.gardening
+
+=== Compact Load: data/kb_raw/gardening_home.md ===
+  file size:       76458 bytes
+  tables:          19
+  total rows:      193
+  skipped rows:    0
+  relationships:   169
+  rel mappings:    15
+  arena text used: 1314725 bytes
+  table 'domains': 3 cols, 9 rows
+  table 'growing_systems': 10 cols, 17 rows
+  table 'soil_and_media': 10 cols, 10 rows
+  table 'composting': 10 cols, 6 rows
+  table 'water_systems': 8 cols, 7 rows
+  table 'plant_families': 8 cols, 9 rows
+  table 'crops': 15 cols, 20 rows
+  table 'companion_planting': 7 cols, 9 rows
+  table 'pest_management': 9 cols, 10 rows
+  table 'disease_management': 8 cols, 8 rows
+  table 'season_extension': 8 cols, 8 rows
+  table 'climate_zones': 8 cols, 7 rows
+  table 'planting_calendar': 8 cols, 7 rows
+  table 'nutrients': 8 cols, 7 rows
+  table 'tools': 6 cols, 10 rows
+  table 'seed_saving': 8 cols, 6 rows
+  table 'preservation': 8 cols, 6 rows
+  table 'concepts': 4 cols, 18 rows
+  table 'section_index': 3 cols, 19 rows
+  relations resolved: 169, unresolved: 0
+kb_config: data/kb_raw/geography.md -> root.edu.geography
+
+=== Compact Load: data/kb_raw/geography.md ===
+  file size:       51109 bytes
+  tables:          17
+  total rows:      217
+  skipped rows:    0
+  relationships:   171
+  rel mappings:    15
+  arena text used: 1157821 bytes
+  table 'continents': 10 cols, 7 rows
+  table 'tectonic_plates': 7 cols, 14 rows
+  table 'countries': 14 cols, 30 rows
+  table 'oceans': 10 cols, 5 rows
+  table 'seas': 7 cols, 10 rows
+  table 'rivers': 9 cols, 10 rows
+  table 'mountains': 8 cols, 10 rows
+  table 'deserts': 8 cols, 10 rows
+  table 'climate_zones': 7 cols, 16 rows
+  table 'biomes': 8 cols, 10 rows
+  table 'earth_layers': 9 cols, 8 rows
+  table 'atmosphere_layers': 6 cols, 5 rows
+  table 'solar_system': 12 cols, 13 rows
+  table 'orbital_mechanics': 5 cols, 12 rows
+  table 'earth_solar': 6 cols, 10 rows
+  table 'concepts': 4 cols, 30 rows
+  table 'section_index': 3 cols, 17 rows
+  relations resolved: 171, unresolved: 0
+kb_config: data/kb_raw/history_human.md -> root.edu.history.human
+
+=== Compact Load: data/kb_raw/history_human.md ===
+  file size:       36378 bytes
+  tables:          7
+  total rows:      244
+  skipped rows:    0
+  relationships:   165
+  rel mappings:    18
+  arena text used: 490198 bytes
+  table 'domains': 3 cols, 12 rows
+  table 'eras': 4 cols, 12 rows
+  table 'concepts': 4 cols, 26 rows
+  table 'transitions': 7 cols, 133 rows
+  table 'thresholds': 5 cols, 14 rows
+  table 'demographics': 6 cols, 30 rows
+  table 'section_index': 3 cols, 17 rows
+  relations resolved: 165, unresolved: 0
+kb_config: data/kb_raw/history_military_tactics.md -> root.edu.history.military_tactics
+
+=== Compact Load: data/kb_raw/history_military_tactics.md ===
+  file size:       68933 bytes
+  tables:          10
+  total rows:      245
+  skipped rows:    0
+  relationships:   376
+  rel mappings:    43
+  arena text used: 715164 bytes
+  table 'concepts': 4 cols, 50 rows
+  table 'formations': 6 cols, 20 rows
+  table 'tactics': 6 cols, 29 rows
+  table 'weapons_systems': 6 cols, 29 rows
+  table 'doctrines': 6 cols, 19 rows
+  table 'battles': 6 cols, 32 rows
+  table 'commanders': 5 cols, 24 rows
+  table 'eras': 6 cols, 10 rows
+  table 'innovations': 6 cols, 20 rows
+  table 'distinctions': 4 cols, 12 rows
+  relations resolved: 348, unresolved: 28
+    unresolved: 'employs' (FM5 -> FM6)
+    unresolved: 'defines' (IN1 -> ER1)
+    unresolved: 'defines' (IN1 -> ER2)
+    unresolved: 'defines' (IN2 -> ER2)
+    unresolved: 'defines' (IN3 -> ER2)
+    ... and 23 more
+kb_config: data/kb_raw/human_anatomy.md -> root.edu.anatomy
+
+=== Compact Load: data/kb_raw/human_anatomy.md ===
+  file size:       40485 bytes
+  tables:          9
+  total rows:      166
+  skipped rows:    0
+  relationships:   224
+  rel mappings:    13
+  arena text used: 623377 bytes
+  table 'systems': 5 cols, 13 rows
+  table 'organs': 9 cols, 22 rows
+  table 'structures': 6 cols, 58 rows
+  table 'tissues': 6 cols, 20 rows
+  table 'regions': 5 cols, 9 rows
+  table 'cavities': 5 cols, 6 rows
+  table 'planes': 5 cols, 4 rows
+  table 'concepts': 4 cols, 25 rows
+  table 'section_index': 3 cols, 9 rows
+  relations resolved: 224, unresolved: 0
+kb_config: data/kb_raw/human_homeostasis.md -> root.edu.homeostasis
+
+=== Compact Load: data/kb_raw/human_homeostasis.md ===
+  file size:       67715 bytes
+  tables:          12
+  total rows:      141
+  skipped rows:    0
+  relationships:   195
+  rel mappings:    15
+  arena text used: 844897 bytes
+  table 'domains': 3 cols, 14 rows
+  table 'regulated_variables': 9 cols, 14 rows
+  table 'sensors': 7 cols, 15 rows
+  table 'control_centers': 6 cols, 12 rows
+  table 'feedback_loops': 10 cols, 15 rows
+  table 'hormones': 8 cols, 16 rows
+  table 'fluid_compartments': 8 cols, 4 rows
+  table 'electrolytes': 8 cols, 7 rows
+  table 'acid_base': 8 cols, 6 rows
+  table 'failure_modes': 8 cols, 11 rows
+  table 'concepts': 4 cols, 15 rows
+  table 'section_index': 3 cols, 12 rows
+  relations resolved: 195, unresolved: 0
+kb_config: data/kb_raw/land_management_forestry.md -> root.trades.forestry
+
+=== Compact Load: data/kb_raw/land_management_forestry.md ===
+  file size:       74904 bytes
+  tables:          15
+  total rows:      115
+  skipped rows:    0
+  relationships:   198
+  rel mappings:    16
+  arena text used: 1049709 bytes
+  table 'domains': 3 cols, 12 rows
+  table 'forest_types': 12 cols, 9 rows
+  table 'tree_biology': 7 cols, 7 rows
+  table 'silviculture': 11 cols, 9 rows
+  table 'timber_harvest': 10 cols, 5 rows
+  table 'forest_measurements': 8 cols, 8 rows
+  table 'soils': 7 cols, 5 rows
+  table 'hydrology': 7 cols, 5 rows
+  table 'fire_ecology': 7 cols, 5 rows
+  table 'pests_and_disease': 8 cols, 5 rows
+  table 'conservation': 7 cols, 5 rows
+  table 'agroforestry': 9 cols, 5 rows
+  table 'economics': 7 cols, 5 rows
+  table 'concepts': 4 cols, 15 rows
+  table 'section_index': 3 cols, 15 rows
+  relations resolved: 198, unresolved: 0
+kb_config: data/kb_raw/law_common_english_in_us.md -> root.edu.law
+
+=== Compact Load: data/kb_raw/law_common_english_in_us.md ===
+  file size:       69955 bytes
+  tables:          14
+  total rows:      123
+  skipped rows:    0
+  relationships:   145
+  rel mappings:    15
+  arena text used: 980236 bytes
+  table 'domains': 3 cols, 9 rows
+  table 'negotiation_phases': 7 cols, 6 rows
+  table 'negotiation_strategies': 8 cols, 6 rows
+  table 'tactics': 7 cols, 10 rows
+  table 'cognitive_biases': 6 cols, 9 rows
+  table 'contract_types': 8 cols, 7 rows
+  table 'contract_elements': 7 cols, 7 rows
+  table 'contract_clauses': 7 cols, 16 rows
+  table 'remedies': 7 cols, 7 rows
+  table 'dispute_resolution': 10 cols, 6 rows
+  table 'risk_allocation': 7 cols, 5 rows
+  table 'financial_terms': 7 cols, 6 rows
+  table 'concepts': 4 cols, 15 rows
+  table 'section_index': 3 cols, 14 rows
+  relations resolved: 145, unresolved: 0
+kb_config: data/kb_raw/literature_classical.md -> root.literature.classical
+
+=== Compact Load: data/kb_raw/literature_classical.md ===
+  file size:       63250 bytes
+  tables:          8
+  total rows:      108
+  skipped rows:    0
+  relationships:   171
+  rel mappings:    15
+  arena text used: 581742 bytes
+  table 'domains': 3 cols, 7 rows
+  table 'periods': 6 cols, 13 rows
+  table 'authors': 8 cols, 30 rows
+  table 'works': 11 cols, 24 rows
+  table 'themes': 5 cols, 8 rows
+  table 'literary_devices': 5 cols, 8 rows
+  table 'concepts': 4 cols, 10 rows
+  table 'section_index': 3 cols, 8 rows
+  relations resolved: 171, unresolved: 0
+kb_config: data/kb_raw/literature_fantasy.md -> root.literature.fantasy
+
+=== Compact Load: data/kb_raw/literature_fantasy.md ===
+  file size:       53116 bytes
+  tables:          16
+  total rows:      192
+  skipped rows:    0
+  relationships:   185
+  rel mappings:    18
+  arena text used: 1095674 bytes
+  table 'foundations': 4 cols, 14 rows
+  table 'subgenres': 6 cols, 17 rows
+  table 'world_elements': 5 cols, 11 rows
+  table 'magic_systems': 5 cols, 10 rows
+  table 'creatures': 5 cols, 14 rows
+  table 'character_archetypes': 5 cols, 12 rows
+  table 'narrative_structures': 5 cols, 12 rows
+  table 'themes': 5 cols, 12 rows
+  table 'tropes': 5 cols, 13 rows
+  table 'conventions': 5 cols, 10 rows
+  table 'conflicts': 5 cols, 10 rows
+  table 'prose_craft': 5 cols, 8 rows
+  table 'influential_works': 6 cols, 12 rows
+  table 'rules': 5 cols, 10 rows
+  table 'failure_modes': 5 cols, 12 rows
+  table 'section_index': 3 cols, 15 rows
+  relations resolved: 185, unresolved: 0
+kb_config: data/kb_raw/literature_heroic_adventure.md -> root.literature.heroic_adventure
+
+=== Compact Load: data/kb_raw/literature_heroic_adventure.md ===
+  file size:       57901 bytes
+  tables:          16
+  total rows:      183
+  skipped rows:    0
+  relationships:   262
+  rel mappings:    11
+  arena text used: 1100059 bytes
+  table 'foundations': 4 cols, 14 rows
+  table 'hero_models': 6 cols, 12 rows
+  table 'journey_structures': 5 cols, 13 rows
+  table 'adventure_types': 6 cols, 14 rows
+  table 'character_types': 5 cols, 11 rows
+  table 'conflict_patterns': 5 cols, 9 rows
+  table 'pacing': 5 cols, 10 rows
+  table 'prose_techniques': 5 cols, 10 rows
+  table 'themes': 5 cols, 13 rows
+  table 'conventions': 5 cols, 10 rows
+  table 'subgenres': 6 cols, 11 rows
+  table 'crossover': 5 cols, 7 rows
+  table 'influential_works': 6 cols, 12 rows
+  table 'rules': 5 cols, 12 rows
+  table 'failure_modes': 5 cols, 10 rows
+  table 'section_index': 3 cols, 15 rows
+  relations resolved: 262, unresolved: 0
+kb_config: data/kb_raw/masonry.md -> root.trades.masonry
+
+=== Compact Load: data/kb_raw/masonry.md ===
+  file size:       43000 bytes
+  tables:          14
+  total rows:      223
+  skipped rows:    0
+  relationships:   185
+  rel mappings:    15
+  arena text used: 954738 bytes
+  table 'unit_types': 7 cols, 18 rows
+  table 'stone_types': 7 cols, 11 rows
+  table 'brick_types': 6 cols, 14 rows
+  table 'mortar_types': 7 cols, 12 rows
+  table 'bond_patterns': 6 cols, 16 rows
+  table 'joint_profiles': 5 cols, 10 rows
+  table 'wall_types': 6 cols, 15 rows
+  table 'arch_construction': 5 cols, 12 rows
+  table 'reinforcement': 6 cols, 13 rows
+  table 'tools': 4 cols, 24 rows
+  table 'techniques': 5 cols, 22 rows
+  table 'defects': 6 cols, 18 rows
+  table 'rules': 5 cols, 25 rows
+  table 'section_index': 3 cols, 13 rows
+  relations resolved: 185, unresolved: 0
+kb_config: data/kb_raw/mathematics_foundation.md -> root.edu.mathematics.foundation
+
+=== Compact Load: data/kb_raw/mathematics_foundation.md ===
+  file size:       27171 bytes
+  tables:          8
+  total rows:      171
+  skipped rows:    0
+  relationships:   206
+  rel mappings:    19
+  arena text used: 546010 bytes
+  table 'axiom_systems': 4 cols, 9 rows
+  table 'logic': 4 cols, 15 rows
+  table 'concepts': 4 cols, 46 rows
+  table 'structures': 7 cols, 26 rows
+  table 'number_systems': 5 cols, 11 rows
+  table 'proof_methods': 4 cols, 14 rows
+  table 'branches': 5 cols, 35 rows
+  table 'distinctions': 4 cols, 15 rows
+  relations resolved: 206, unresolved: 0
+kb_config: data/kb_raw/mathematics_logic.md -> root.edu.mathematics.logic
+
+=== Compact Load: data/kb_raw/mathematics_logic.md ===
+  file size:       75719 bytes
+  tables:          21
+  total rows:      249
+  skipped rows:    0
+  relationships:   227
+  rel mappings:    15
+  arena text used: 1442794 bytes
+  table 'domains': 3 cols, 13 rows
+  table 'propositional_logic': 7 cols, 15 rows
+  table 'predicate_logic': 7 cols, 17 rows
+  table 'set_theory': 6 cols, 16 rows
+  table 'relations': 6 cols, 13 rows
+  table 'functions': 6 cols, 8 rows
+  table 'proof_theory': 6 cols, 8 rows
+  table 'model_theory': 6 cols, 10 rows
+  table 'computability': 6 cols, 8 rows
+  table 'modal_logic': 7 cols, 10 rows
+  table 'type_theory': 6 cols, 4 rows
+  table 'category_logic': 6 cols, 4 rows
+  table 'paradoxes': 6 cols, 6 rows
+  table 'metalogic': 7 cols, 11 rows
+  table 'axiom_systems': 9 cols, 9 rows
+  table 'inference_rules': 7 cols, 18 rows
+  table 'logical_identities': 5 cols, 21 rows
+  table 'normal_forms': 7 cols, 6 rows
+  table 'decidability': 6 cols, 12 rows
+  table 'concepts': 4 cols, 19 rows
+  table 'section_index': 3 cols, 21 rows
+  relations resolved: 227, unresolved: 0
+kb_config: data/kb_raw/mechanical_systems.md -> root.engineering.mechanical
+
+=== Compact Load: data/kb_raw/mechanical_systems.md ===
+  file size:       71122 bytes
+  tables:          25
+  total rows:      279
+  skipped rows:    0
+  relationships:   176
+  rel mappings:    16
+  arena text used: 1700695 bytes
+  table 'domains': 3 cols, 8 rows
+  table 'energy_conversion': 7 cols, 10 rows
+  table 'prime_movers': 9 cols, 10 rows
+  table 'pumps': 10 cols, 12 rows
+  table 'compressors': 8 cols, 6 rows
+  table 'valves': 9 cols, 18 rows
+  table 'actuators': 8 cols, 9 rows
+  table 'bearings': 8 cols, 11 rows
+  table 'gears': 9 cols, 10 rows
+  table 'couplings': 7 cols, 10 rows
+  table 'seals': 9 cols, 10 rows
+  table 'fasteners': 7 cols, 7 rows
+  table 'springs': 7 cols, 7 rows
+  table 'dampers': 7 cols, 7 rows
+  table 'heat_exchangers': 8 cols, 10 rows
+  table 'piping': 8 cols, 9 rows
+  table 'hydraulic_systems': 7 cols, 5 rows
+  table 'pneumatic_systems': 7 cols, 3 rows
+  table 'structural': 7 cols, 10 rows
+  table 'sensors': 8 cols, 15 rows
+  table 'controllers': 8 cols, 8 rows
+  table 'materials': 11 cols, 16 rows
+  table 'failure_modes': 6 cols, 13 rows
+  table 'concepts': 4 cols, 30 rows
+  table 'section_index': 3 cols, 25 rows
+  relations resolved: 176, unresolved: 0
+kb_config: data/kb_raw/movement_locomotion_temporal.md -> root.edu.movement
+
+=== Compact Load: data/kb_raw/movement_locomotion_temporal.md ===
+  file size:       79940 bytes
+  tables:          16
+  total rows:      174
+  skipped rows:    0
+  relationships:   238
+  rel mappings:    98
+  arena text used: 1115656 bytes
+  table 'concepts': 4 cols, 23 rows
+  table 'spatial_motion': 5 cols, 15 rows
+  table 'temporal_position': 5 cols, 12 rows
+  table 'direction': 5 cols, 14 rows
+  table 'state': 5 cols, 13 rows
+  table 'transition': 5 cols, 13 rows
+  table 'causality': 5 cols, 12 rows
+  table 'reference_frames': 5 cols, 7 rows
+  table 'path': 5 cols, 10 rows
+  table 'velocity': 5 cols, 6 rows
+  table 'oscillation': 5 cols, 4 rows
+  table 'navigation': 5 cols, 6 rows
+  table 'agency': 5 cols, 6 rows
+  table 'constraints': 5 cols, 8 rows
+  table 'failure_modes': 6 cols, 10 rows
+  table 'distinctions': 4 cols, 15 rows
+  relations resolved: 233, unresolved: 5
+    unresolved: 'defines' (CO12 -> CO1)
+    unresolved: 'defines' (CO12 -> CO2)
+    unresolved: 'defines' (CO12 -> CO3)
+    unresolved: 'converts' (SM6 -> SM1)
+    unresolved: 'converts' (SM6 -> SM2)
+kb_config: data/kb_raw/neuroscience_function_anatomy.md -> root.edu.neuroscience
+
+=== Compact Load: data/kb_raw/neuroscience_function_anatomy.md ===
+  file size:       75276 bytes
+  tables:          15
+  total rows:      248
+  skipped rows:    0
+  relationships:   246
+  rel mappings:    15
+  arena text used: 1048807 bytes
+  table 'divisions': 5 cols, 6 rows
+  table 'regions': 6 cols, 34 rows
+  table 'nuclei': 6 cols, 29 rows
+  table 'tracts': 7 cols, 25 rows
+  table 'neurotransmitters': 7 cols, 12 rows
+  table 'receptors': 7 cols, 13 rows
+  table 'circuits': 6 cols, 12 rows
+  table 'cells': 6 cols, 16 rows
+  table 'concepts': 4 cols, 42 rows
+  table 'functional_maps': 8 cols, 10 rows
+  table 'cranial_nerves': 9 cols, 12 rows
+  table 'vasculature': 5 cols, 7 rows
+  table 'barriers': 6 cols, 3 rows
+  table 'clinical': 5 cols, 12 rows
+  table 'section_index': 3 cols, 15 rows
+  relations resolved: 246, unresolved: 0
+kb_config: data/kb_raw/philosophy_ancient.md -> root.edu.philosophy
+
+=== Compact Load: data/kb_raw/philosophy_ancient.md ===
+  file size:       57463 bytes
+  tables:          6
+  total rows:      258
+  skipped rows:    0
+  relationships:   331
+  rel mappings:    31
+  arena text used: 442391 bytes
+  table 'concepts': 4 cols, 69 rows
+  table 'thinkers': 6 cols, 68 rows
+  table 'schools': 6 cols, 28 rows
+  table 'texts': 5 cols, 39 rows
+  table 'claims': 5 cols, 34 rows
+  table 'distinctions': 4 cols, 20 rows
+  relations resolved: 331, unresolved: 0
+kb_config: data/kb_raw/physics.md -> root.edu.physics
+
+=== Compact Load: data/kb_raw/physics.md ===
+  file size:       35963 bytes
+  tables:          9
+  total rows:      237
+  skipped rows:    0
+  relationships:   193
+  rel mappings:    20
+  arena text used: 619950 bytes
+  table 'domains': 3 cols, 14 rows
+  table 'constants': 6 cols, 24 rows
+  table 'concepts': 4 cols, 52 rows
+  table 'laws': 7 cols, 63 rows
+  table 'particles': 9 cols, 23 rows
+  table 'forces': 7 cols, 5 rows
+  table 'transitions': 6 cols, 36 rows
+  table 'thresholds': 5 cols, 12 rows
+  table 'section_index': 3 cols, 8 rows
+  relations resolved: 193, unresolved: 0
+kb_config: data/kb_raw/programming_algorithms.md -> root.programming.algorithms
+
+=== Compact Load: data/kb_raw/programming_algorithms.md ===
+  file size:       47643 bytes
+  tables:          8
+  total rows:      271
+  skipped rows:    0
+  relationships:   221
+  rel mappings:    20
+  arena text used: 566316 bytes
+  table 'concepts': 4 cols, 66 rows
+  table 'complexity_classes': 5 cols, 17 rows
+  table 'techniques': 5 cols, 26 rows
+  table 'data_structures': 7 cols, 35 rows
+  table 'algorithms': 11 cols, 81 rows
+  table 'problem_classes': 5 cols, 17 rows
+  table 'recurrences': 5 cols, 13 rows
+  table 'distinctions': 4 cols, 16 rows
+  relations resolved: 219, unresolved: 2
+    unresolved: 'characterizes' (CO28 -> PC12)
+    unresolved: 'characterizes' (CO29 -> CO19)
+kb_config: data/kb_raw/programming_c_python_zig.md -> root.programming.c_python_zig
+
+=== Compact Load: data/kb_raw/programming_c_python_zig.md ===
+  file size:       35928 bytes
+  tables:          11
+  total rows:      292
+  skipped rows:    0
+  relationships:   229
+  rel mappings:    20
+  arena text used: 751776 bytes
+  table 'concepts': 4 cols, 73 rows
+  table 'type_systems': 5 cols, 3 rows
+  table 'types': 6 cols, 71 rows
+  table 'memory_models': 5 cols, 12 rows
+  table 'control_flow': 5 cols, 28 rows
+  table 'data_structures': 5 cols, 23 rows
+  table 'paradigms': 4 cols, 9 rows
+  table 'error_handling': 4 cols, 14 rows
+  table 'toolchains': 4 cols, 20 rows
+  table 'idioms': 5 cols, 24 rows
+  table 'distinctions': 4 cols, 15 rows
+  relations resolved: 168, unresolved: 61
+    unresolved: 'characterizes' (TS1 -> TY1)
+    unresolved: 'characterizes' (TS1 -> TY2)
+    unresolved: 'characterizes' (TS1 -> TY3)
+    unresolved: 'characterizes' (TS1 -> TY4)
+    unresolved: 'characterizes' (TS1 -> TY5)
+    ... and 56 more
+kb_config: data/kb_raw/programming_data_structures.md -> root.programming.data_structures
+
+=== Compact Load: data/kb_raw/programming_data_structures.md ===
+  file size:       53036 bytes
+  tables:          8
+  total rows:      371
+  skipped rows:    0
+  relationships:   252
+  rel mappings:    21
+  arena text used: 571152 bytes
+  table 'concepts': 4 cols, 61 rows
+  table 'structures': 6 cols, 62 rows
+  table 'fields': 5 cols, 60 rows
+  table 'operations': 7 cols, 110 rows
+  table 'variants': 5 cols, 26 rows
+  table 'failure_modes': 6 cols, 20 rows
+  table 'complexity_bounds': 5 cols, 15 rows
+  table 'distinctions': 4 cols, 17 rows
+  relations resolved: 246, unresolved: 6
+    unresolved: 'ΓÇö' (DS52_placeholder -> ΓÇö)
+    unresolved: 'characterizes' (CO5 -> ST2)
+    unresolved: 'characterizes' (CO5 -> ST15)
+    unresolved: 'characterizes' (CO5 -> ST17)
+    unresolved: 'characterizes' (CO5 -> ST26)
+    ... and 1 more
+kb_config: data/kb_raw/programming_prolog.md -> root.programming.prolog
+
+=== Compact Load: data/kb_raw/programming_prolog.md ===
+  file size:       53194 bytes
+  tables:          14
+  total rows:      275
+  skipped rows:    0
+  relationships:   159
+  rel mappings:    39
+  arena text used: 963930 bytes
+  table 'concepts': 4 cols, 42 rows
+  table 'syntax': 5 cols, 25 rows
+  table 'data_types': 6 cols, 10 rows
+  table 'built_ins': 7 cols, 82 rows
+  table 'control': 6 cols, 12 rows
+  table 'unification': 5 cols, 6 rows
+  table 'search': 5 cols, 6 rows
+  table 'meta': 6 cols, 10 rows
+  table 'io': 5 cols, 13 rows
+  table 'modules': 5 cols, 7 rows
+  table 'techniques': 6 cols, 13 rows
+  table 'libraries': 5 cols, 22 rows
+  table 'failure_modes': 6 cols, 13 rows
+  table 'distinctions': 4 cols, 14 rows
+  relations resolved: 156, unresolved: 3
+    unresolved: 'characterizes' (CO2 -> CO1)
+    unresolved: 'executes' (CO27 -> CO3)
+    unresolved: 'characterizes' (CO35 -> CO16)
+kb_config: data/kb_raw/programming_python.md -> root.programming.python
+
+=== Compact Load: data/kb_raw/programming_python.md ===
+  file size:       65150 bytes
+  tables:          20
+  total rows:      183
+  skipped rows:    0
+  relationships:   145
+  rel mappings:    15
+  arena text used: 1368519 bytes
+  table 'domains': 3 cols, 10 rows
+  table 'data_model': 7 cols, 4 rows
+  table 'builtin_types': 8 cols, 15 rows
+  table 'operators': 6 cols, 15 rows
+  table 'control_flow': 5 cols, 8 rows
+  table 'functions': 6 cols, 10 rows
+  table 'classes': 6 cols, 11 rows
+  table 'iterators_generators': 7 cols, 6 rows
+  table 'comprehensions': 6 cols, 4 rows
+  table 'decorators': 7 cols, 8 rows
+  table 'context_managers': 7 cols, 3 rows
+  table 'concurrency': 8 cols, 4 rows
+  table 'type_hints': 6 cols, 6 rows
+  table 'magic_methods': 6 cols, 16 rows
+  table 'exceptions': 6 cols, 11 rows
+  table 'stdlib_core': 6 cols, 8 rows
+  table 'packaging': 6 cols, 4 rows
+  table 'antipatterns': 7 cols, 8 rows
+  table 'concepts': 4 cols, 12 rows
+  table 'section_index': 3 cols, 20 rows
+  relations resolved: 145, unresolved: 0
+kb_config: data/kb_raw/programming_sqlite3.md -> root.programming.sqlite
+
+=== Compact Load: data/kb_raw/programming_sqlite3.md ===
+  file size:       53338 bytes
+  tables:          26
+  total rows:      301
+  skipped rows:    0
+  relationships:   79
+  rel mappings:    10
+  arena text used: 1752514 bytes
+  table 'foundations': 4 cols, 10 rows
+  table 'data_types': 5 cols, 7 rows
+  table 'operators': 4 cols, 15 rows
+  table 'ddl': 5 cols, 11 rows
+  table 'dml': 5 cols, 6 rows
+  table 'select_clauses': 5 cols, 11 rows
+  table 'joins': 5 cols, 8 rows
+  table 'subqueries': 5 cols, 5 rows
+  table 'aggregation': 5 cols, 7 rows
+  table 'window_functions': 5 cols, 13 rows
+  table 'cte': 5 cols, 4 rows
+  table 'indexes': 5 cols, 7 rows
+  table 'transactions': 5 cols, 6 rows
+  table 'pragmas': 5 cols, 14 rows
+  table 'json': 5 cols, 13 rows
+  table 'fts': 5 cols, 10 rows
+  table 'expressions': 5 cols, 19 rows
+  table 'date_time': 5 cols, 8 rows
+  table 'constraints': 5 cols, 9 rows
+  table 'views': 5 cols, 4 rows
+  table 'triggers': 5 cols, 6 rows
+  table 'functions': 4 cols, 17 rows
+  table 'runbooks': 5 cols, 42 rows
+  table 'anti_patterns': 5 cols, 12 rows
+  table 'rules': 5 cols, 12 rows
+  table 'section_index': 3 cols, 25 rows
+  relations resolved: 79, unresolved: 0
+kb_config: data/kb_raw/programming_zig.md -> root.programming.zig
+
+=== Compact Load: data/kb_raw/programming_zig.md ===
+  file size:       69617 bytes
+  tables:          26
+  total rows:      196
+  skipped rows:    0
+  relationships:   219
+  rel mappings:    15
+  arena text used: 1765150 bytes
+  table 'domains': 3 cols, 7 rows
+  table 'type_system': 8 cols, 8 rows
+  table 'primitive_types': 7 cols, 5 rows
+  table 'aggregate_types': 7 cols, 6 rows
+  table 'pointer_types': 7 cols, 7 rows
+  table 'optional_error': 7 cols, 4 rows
+  table 'operators': 7 cols, 17 rows
+  table 'control_flow': 5 cols, 10 rows
+  table 'functions': 6 cols, 8 rows
+  table 'comptime': 6 cols, 6 rows
+  table 'memory': 7 cols, 5 rows
+  table 'allocators': 8 cols, 6 rows
+  table 'slices_arrays': 6 cols, 5 rows
+  table 'strings': 6 cols, 4 rows
+  table 'structs': 6 cols, 5 rows
+  table 'enums': 6 cols, 2 rows
+  table 'unions': 6 cols, 3 rows
+  table 'error_handling': 6 cols, 6 rows
+  table 'builtin_functions': 6 cols, 18 rows
+  table 'safety': 7 cols, 6 rows
+  table 'testing': 6 cols, 4 rows
+  table 'build_system': 6 cols, 4 rows
+  table 'c_interop': 6 cols, 5 rows
+  table 'concepts': 4 cols, 12 rows
+  table 'antipatterns': 7 cols, 7 rows
+  table 'section_index': 3 cols, 26 rows
+  relations resolved: 219, unresolved: 0
+kb_config: data/kb_raw/project_management.md -> root.business.project_management
+
+=== Compact Load: data/kb_raw/project_management.md ===
+  file size:       53522 bytes
+  tables:          19
+  total rows:      257
+  skipped rows:    0
+  relationships:   224
+  rel mappings:    15
+  arena text used: 1291710 bytes
+  table 'foundations': 4 cols, 18 rows
+  table 'phases': 6 cols, 5 rows
+  table 'activities': 6 cols, 42 rows
+  table 'deliverables': 6 cols, 26 rows
+  table 'roles': 5 cols, 11 rows
+  table 'tracking': 7 cols, 12 rows
+  table 'estimating': 6 cols, 7 rows
+  table 'dependencies': 5 cols, 9 rows
+  table 'risk': 4 cols, 14 rows
+  table 'change_control': 5 cols, 6 rows
+  table 'methods': 7 cols, 8 rows
+  table 'methods_vs_waterfall': 4 cols, 7 rows
+  table 'meetings': 6 cols, 11 rows
+  table 'metrics': 5 cols, 18 rows
+  table 'communication': 6 cols, 7 rows
+  table 'tools': 5 cols, 10 rows
+  table 'rules': 5 cols, 16 rows
+  table 'failure_modes': 5 cols, 12 rows
+  table 'section_index': 3 cols, 18 rows
+  relations resolved: 224, unresolved: 0
+kb_config: data/kb_raw/troubleshooting.md -> root.business.troubleshooting
+
+=== Compact Load: data/kb_raw/troubleshooting.md ===
+  file size:       40992 bytes
+  tables:          12
+  total rows:      168
+  skipped rows:    0
+  relationships:   233
+  rel mappings:    12
+  arena text used: 821097 bytes
+  table 'principles': 4 cols, 15 rows
+  table 'phases': 5 cols, 10 rows
+  table 'methods': 5 cols, 21 rows
+  table 'sensory_checks': 4 cols, 15 rows
+  table 'fault_classes': 5 cols, 10 rows
+  table 'diagnostic_patterns': 5 cols, 14 rows
+  table 'domain_systems': 5 cols, 10 rows
+  table 'interventions': 6 cols, 16 rows
+  table 'escalation_triggers': 4 cols, 10 rows
+  table 'concepts': 4 cols, 20 rows
+  table 'cross_domain_map': 8 cols, 16 rows
+  table 'section_index': 3 cols, 11 rows
+  relations resolved: 233, unresolved: 0
+kb_config: data/kb_raw/utility_ai_scoring_behaviors.md -> root.system.scoring
+
+=== Compact Load: data/kb_raw/utility_ai_scoring_behaviors.md ===
+  file size:       41766 bytes
+  tables:          15
+  total rows:      166
+  skipped rows:    0
+  relationships:   154
+  rel mappings:    17
+  arena text used: 1019159 bytes
+  table 'foundations': 4 cols, 14 rows
+  table 'scoring_curves': 6 cols, 22 rows
+  table 'curve_parameters': 6 cols, 8 rows
+  table 'normalization': 5 cols, 7 rows
+  table 'considerations': 6 cols, 15 rows
+  table 'reasoners': 6 cols, 7 rows
+  table 'behavior_selection': 5 cols, 8 rows
+  table 'compensation': 6 cols, 9 rows
+  table 'dave_mark_fixup': 5 cols, 12 rows
+  table 'weight_systems': 5 cols, 6 rows
+  table 'composition': 5 cols, 8 rows
+  table 'tuning_rules': 4 cols, 14 rows
+  table 'failure_modes': 5 cols, 12 rows
+  table 'applications': 4 cols, 10 rows
+  table 'section_index': 3 cols, 14 rows
+  relations resolved: 154, unresolved: 0
+kb_config: data/kb_raw/vdr_prolog_builtins.md -> root.system.builtins
+
+=== Compact Load: data/kb_raw/vdr_prolog_builtins.md ===
+  file size:       49292 bytes
+  tables:          5
+  total rows:      570
+  skipped rows:    0
+  relationships:   109
+  rel mappings:    5
+  arena text used: 374128 bytes
+  table 'modules': 5 cols, 77 rows
+  table 'functions': 8 cols, 410 rows
+  table 'categories': 6 cols, 41 rows
+  table 'data_structures': 5 cols, 21 rows
+  table 'section_index': 3 cols, 21 rows
+  relations resolved: 109, unresolved: 0
+kb_config: data/kb_raw/vdr_prolog_project_tech_spec.md -> root.system.spec
+
+=== Compact Load: data/kb_raw/vdr_prolog_project_tech_spec.md ===
+  file size:       43864 bytes
+  tables:          39
+  total rows:      438
+  skipped rows:    0
+  relationships:   138
+  rel mappings:    0
+  arena text used: 2594568 bytes
+  table 'principles': 4 cols, 18 rows
+  table 'id_system': 4 cols, 6 rows
+  table 'structural_uuid': 4 cols, 8 rows
+  table 'lookup': 4 cols, 5 rows
+  table 'data_types': 5 cols, 31 rows
+  table 'arithmetic': 5 cols, 5 rows
+  table 'arenas': 5 cols, 4 rows
+  table 'kb_tree': 5 cols, 16 rows
+  table 'components': 4 cols, 28 rows
+  table 'http': 4 cols, 6 rows
+  table 'compute': 5 cols, 6 rows
+  table 'model': 4 cols, 16 rows
+  table 'prolog': 5 cols, 8 rows
+  table 'relation_types': 6 cols, 27 rows
+  table 'ingestion': 4 cols, 6 rows
+  table 'confidence': 4 cols, 15 rows
+  table 'scoring': 4 cols, 6 rows
+  table 'fsm': 4 cols, 8 rows
+  table 'prompt_pipeline': 4 cols, 7 rows
+  table 'llm_identity': 4 cols, 4 rows
+  table 'causal_chain': 4 cols, 5 rows
+  table 'error_model': 4 cols, 5 rows
+  table 'translation': 4 cols, 6 rows
+  table 'poetry': 4 cols, 6 rows
+  table 'patterns': 4 cols, 5 rows
+  table 'feedback': 4 cols, 6 rows
+  table 'cross_domain': 4 cols, 6 rows
+  table 'pipeline': 4 cols, 9 rows
+  table 'inference': 5 cols, 3 rows
+  table 'llm_tree': 3 cols, 10 rows
+  table 'persistence': 4 cols, 7 rows
+  table 'errors': 4 cols, 9 rows
+  table 'invariants': 4 cols, 47 rows
+  table 'performance': 5 cols, 14 rows
+  table 'scale': 4 cols, 12 rows
+  table 'product': 4 cols, 6 rows
+  table 'build_stages': 3 cols, 6 rows
+  table 'impl_stages': 4 cols, 9 rows
+  table 'section_index': 3 cols, 37 rows
+  relations resolved: 138, unresolved: 0
+kb_config: data/kb_raw/vdr_prolog_zig_types.md -> root.system.types
+
+=== Compact Load: data/kb_raw/vdr_prolog_zig_types.md ===
+  file size:       20023 bytes
+  tables:          9
+  total rows:      191
+  skipped rows:    0
+  relationships:   81
+  rel mappings:    8
+  arena text used: 606298 bytes
+  table 'constants': 5 cols, 13 rows
+  table 'structural_id': 6 cols, 8 rows
+  table 'enums': 5 cols, 24 rows
+  table 'structs': 4 cols, 88 rows
+  table 'key_changes_from_v1': 4 cols, 13 rows
+  table 'confidence_table': 5 cols, 11 rows
+  table 'recovery_dispatch': 3 cols, 9 rows
+  table 'seed_ids': 4 cols, 17 rows
+  table 'section_index': 3 cols, 8 rows
+  relations resolved: 81, unresolved: 0
+kb_config: data/kb_raw/zoology.md -> root.edu.zoology
+
+=== Compact Load: data/kb_raw/zoology.md ===
+  file size:       43897 bytes
+  tables:          17
+  total rows:      182
+  skipped rows:    0
+  relationships:   150
+  rel mappings:    13
+  arena text used: 1152605 bytes
+  table 'foundations': 4 cols, 16 rows
+  table 'taxonomy': 5 cols, 12 rows
+  table 'body_plans': 7 cols, 8 rows
+  table 'organ_systems': 6 cols, 10 rows
+  table 'locomotion': 6 cols, 10 rows
+  table 'reproduction': 6 cols, 10 rows
+  table 'development': 5 cols, 11 rows
+  table 'ecology': 5 cols, 13 rows
+  table 'behavior': 5 cols, 16 rows
+  table 'phyla': 6 cols, 9 rows
+  table 'vertebrate_classes': 9 cols, 7 rows
+  table 'sensory': 6 cols, 10 rows
+  table 'thermoregulation': 6 cols, 5 rows
+  table 'scaling': 5 cols, 7 rows
+  table 'conservation': 5 cols, 10 rows
+  table 'rules': 5 cols, 12 rows
+  table 'section_index': 3 cols, 16 rows
+  relations resolved: 150, unresolved: 0
+
+=== Compact Loading Summary ===
+  files loaded:     59
+  files skipped:    0
+  total tables:     882
+  total rows:       12526
+  total relations:  12087
+  total file bytes: 3512974
+  arena used:       179734965 bytes
+  arena free:       894006859 bytes
+
+=== KB Hierarchy ===
+    root.edu.physics: 9 tables, 237 rows, 193 rels
+    root.edu.chemistry: 18 tables, 147 rows, 168 rels
+    root.edu.biology: 15 tables, 111 rows, 166 rels
+    root.edu.astronomy: 15 tables, 116 rows, 134 rels
+    root.edu.climate: 15 tables, 151 rows, 203 rels
+    root.edu.geography: 17 tables, 217 rows, 171 rels
+    root.edu.zoology: 17 tables, 182 rows, 150 rels
+    root.edu.neuroscience: 15 tables, 248 rows, 246 rels
+    root.edu.anatomy: 9 tables, 166 rows, 224 rels
+    root.edu.homeostasis: 12 tables, 141 rows, 195 rels
+    root.edu.body_mechanics: 13 tables, 253 rows, 302 rels
+      root.edu.mathematics.foundation: 8 tables, 171 rows, 206 rels
+      root.edu.mathematics.logic: 21 tables, 249 rows, 227 rels
+    root.edu.economics: 10 tables, 243 rows, 317 rels
+    root.edu.philosophy: 6 tables, 258 rows, 331 rels
+      root.edu.history.human: 7 tables, 244 rows, 165 rels
+      root.edu.history.military_tactics: 10 tables, 245 rows, 376 rels
+    root.edu.law: 14 tables, 123 rows, 145 rels
+    root.edu.cognition: 18 tables, 203 rows, 280 rels
+    root.edu.movement: 16 tables, 174 rows, 238 rels
+    root.programming.algorithms: 8 tables, 271 rows, 221 rels
+    root.programming.data_structures: 8 tables, 371 rows, 252 rels
+    root.programming.zig: 26 tables, 196 rows, 219 rels
+    root.programming.python: 20 tables, 183 rows, 145 rels
+    root.programming.prolog: 14 tables, 275 rows, 159 rels
+    root.programming.sqlite: 26 tables, 301 rows, 79 rels
+    root.programming.c_python_zig: 11 tables, 292 rows, 229 rels
+    root.programming.databases: 15 tables, 147 rows, 178 rels
+    root.programming.fsm: 18 tables, 216 rows, 216 rels
+    root.engineering.electronics: 26 tables, 280 rows, 227 rels
+    root.engineering.power_grid: 19 tables, 143 rows, 172 rels
+    root.engineering.radio_cellular: 15 tables, 194 rows, 221 rels
+    root.engineering.mechanical: 25 tables, 279 rows, 176 rels
+    root.engineering.construction: 19 tables, 150 rows, 150 rels
+    root.engineering.architecture: 12 tables, 239 rows, 205 rels
+    root.trades.blacksmithing: 12 tables, 116 rows, 258 rels
+    root.trades.masonry: 14 tables, 223 rows, 185 rels
+    root.trades.fabrication: 9 tables, 203 rows, 256 rels
+    root.trades.animal_husbandry: 13 tables, 177 rows, 274 rels
+    root.trades.gardening: 19 tables, 193 rows, 169 rels
+    root.trades.forestry: 15 tables, 115 rows, 198 rels
+    root.trades.cooking: 16 tables, 164 rows, 192 rels
+    root.trades.camping: 22 tables, 217 rows, 187 rels
+    root.language.english_grammar: 13 tables, 224 rows, 198 rels
+    root.language.english_phrasing: 17 tables, 203 rows, 206 rels
+    root.language.english_vocabulary: 8 tables, 313 rows, 209 rels
+    root.language.connections: 15 tables, 208 rows, 245 rels
+    root.literature.classical: 8 tables, 108 rows, 171 rels
+    root.literature.fantasy: 16 tables, 192 rows, 185 rels
+    root.literature.heroic_adventure: 16 tables, 183 rows, 262 rels
+    root.literature.dramatic_writing: 14 tables, 145 rows, 185 rels
+    root.literature.art: 15 tables, 160 rows, 271 rels
+    root.business.accounting: 14 tables, 176 rows, 211 rels
+    root.business.project_management: 19 tables, 257 rows, 224 rels
+    root.business.troubleshooting: 12 tables, 168 rows, 233 rels
+    root.system.scoring: 15 tables, 166 rows, 154 rels
+    root.system.builtins: 5 tables, 570 rows, 109 rels
+    root.system.spec: 39 tables, 438 rows, 138 rels
+    root.system.types: 9 tables, 191 rows, 81 rels
+
+=== Creating KB Tree ===
+  KBs created: 59
+  arena used:  179836920 bytes
+  arena free:  893904904 bytes
+
+=== Populating KB Data ===
+  root.edu.physics: 237 facts, 193 rels
+  root.edu.chemistry: 147 facts, 166 rels
+  root.edu.biology: 111 facts, 166 rels
+  root.edu.astronomy: 116 facts, 134 rels
+  root.edu.climate: 151 facts, 203 rels
+  root.edu.geography: 217 facts, 171 rels
+  root.edu.zoology: 182 facts, 150 rels
+  root.edu.neuroscience: 248 facts, 246 rels
+  root.edu.anatomy: 166 facts, 224 rels
+  root.edu.homeostasis: 141 facts, 195 rels
+  root.edu.body_mechanics: 253 facts, 302 rels
+  root.edu.mathematics.foundation: 171 facts, 206 rels
+  root.edu.mathematics.logic: 249 facts, 227 rels
+  root.edu.economics: 243 facts, 316 rels
+  root.edu.philosophy: 258 facts, 331 rels
+  root.edu.history.human: 244 facts, 165 rels
+  root.edu.history.military_tactics: 245 facts, 348 rels
+  root.edu.law: 123 facts, 145 rels
+  root.edu.cognition: 203 facts, 280 rels
+  root.edu.movement: 174 facts, 233 rels
+  root.programming.algorithms: 271 facts, 219 rels
+  root.programming.data_structures: 371 facts, 246 rels
+  root.programming.zig: 196 facts, 219 rels
+  root.programming.python: 183 facts, 145 rels
+  root.programming.prolog: 275 facts, 156 rels
+  root.programming.sqlite: 301 facts, 79 rels
+  root.programming.c_python_zig: 292 facts, 168 rels
+  root.programming.databases: 147 facts, 177 rels
+  root.programming.fsm: 216 facts, 216 rels
+  root.engineering.electronics: 280 facts, 227 rels
+  root.engineering.power_grid: 143 facts, 172 rels
+  root.engineering.radio_cellular: 194 facts, 221 rels
+  root.engineering.mechanical: 279 facts, 176 rels
+  root.engineering.construction: 150 facts, 150 rels
+  root.engineering.architecture: 239 facts, 204 rels
+  root.trades.blacksmithing: 116 facts, 250 rels
+  root.trades.masonry: 223 facts, 185 rels
+  root.trades.fabrication: 203 facts, 256 rels
+  root.trades.animal_husbandry: 177 facts, 274 rels
+  root.trades.gardening: 193 facts, 169 rels
+  root.trades.forestry: 115 facts, 198 rels
+  root.trades.cooking: 164 facts, 192 rels
+  root.trades.camping: 217 facts, 187 rels
+  root.language.english_grammar: 224 facts, 198 rels
+  root.language.english_phrasing: 203 facts, 206 rels
+  root.language.english_vocabulary: 313 facts, 209 rels
+  root.language.connections: 208 facts, 245 rels
+  root.literature.classical: 108 facts, 171 rels
+  root.literature.fantasy: 192 facts, 185 rels
+  root.literature.heroic_adventure: 183 facts, 262 rels
+  root.literature.dramatic_writing: 145 facts, 185 rels
+  root.literature.art: 160 facts, 271 rels
+  root.business.accounting: 176 facts, 211 rels
+  root.business.project_management: 257 facts, 224 rels
+  root.business.troubleshooting: 168 facts, 233 rels
+  root.system.scoring: 166 facts, 154 rels
+  root.system.builtins: 570 facts, 109 rels
+  root.system.spec: 438 facts, 138 rels
+  root.system.types: 191 facts, 81 rels
+
+  total facts:     12526
+  total relations: 11969
+
+=== Populating KBData Columns ===
+  root.edu.physics: 237 data entries
+  root.edu.chemistry: 147 data entries
+  root.edu.biology: 111 data entries
+  root.edu.astronomy: 116 data entries
+  root.edu.climate: 151 data entries
+  root.edu.geography: 217 data entries
+  root.edu.zoology: 182 data entries
+  root.edu.neuroscience: 248 data entries
+  root.edu.anatomy: 166 data entries
+  root.edu.homeostasis: 141 data entries
+  root.edu.body_mechanics: 253 data entries
+  root.edu.mathematics.foundation: 171 data entries
+  root.edu.mathematics.logic: 249 data entries
+  root.edu.economics: 243 data entries
+  root.edu.philosophy: 258 data entries
+  root.edu.history.human: 244 data entries
+  root.edu.history.military_tactics: 245 data entries
+  root.edu.law: 123 data entries
+  root.edu.cognition: 203 data entries
+  root.edu.movement: 174 data entries
+  root.programming.algorithms: 271 data entries
+  root.programming.data_structures: 371 data entries
+  root.programming.zig: 196 data entries
+  root.programming.python: 183 data entries
+  root.programming.prolog: 275 data entries
+  root.programming.sqlite: 301 data entries
+  root.programming.c_python_zig: 292 data entries
+  root.programming.databases: 147 data entries
+  root.programming.fsm: 216 data entries
+  root.engineering.electronics: 280 data entries
+  root.engineering.power_grid: 143 data entries
+  root.engineering.radio_cellular: 194 data entries
+  root.engineering.mechanical: 279 data entries
+  root.engineering.construction: 150 data entries
+  root.engineering.architecture: 239 data entries
+  root.trades.blacksmithing: 116 data entries
+  root.trades.masonry: 223 data entries
+  root.trades.fabrication: 203 data entries
+  root.trades.animal_husbandry: 177 data entries
+  root.trades.gardening: 193 data entries
+  root.trades.forestry: 115 data entries
+  root.trades.cooking: 164 data entries
+  root.trades.camping: 217 data entries
+  root.language.english_grammar: 224 data entries
+  root.language.english_phrasing: 203 data entries
+  root.language.english_vocabulary: 313 data entries
+  root.language.connections: 208 data entries
+  root.literature.classical: 108 data entries
+  root.literature.fantasy: 192 data entries
+  root.literature.heroic_adventure: 183 data entries
+  root.literature.dramatic_writing: 145 data entries
+  root.literature.art: 160 data entries
+  root.business.accounting: 176 data entries
+  root.business.project_management: 257 data entries
+  root.business.troubleshooting: 168 data entries
+  root.system.scoring: 166 data entries
+  root.system.builtins: 570 data entries
+  root.system.spec: 438 data entries
+  root.system.types: 191 data entries
+
+  total data entries: 12526
+  arena used:        222799968 bytes
+  arena free:        850941856 bytes
+
+=== Verifying KBData Lookup ===
+
+  total checked:     12526
+  total ok:          12526
+  total failed:      0
+  total with col_0:  12526
+  PASS: all 12526 data entries round-trip through getVdrValue
+
+=== Sample KBData Entry ===
+  KB:         root.edu.physics
+  VdrId:      576478344488419328
+  scope:      0
+  entry_type: 1
+  L1:         0
+  L2:         0
+  L3:         255
+  L4:         255
+  L5:         255
+  item_id:    0
+  --- columns ---
+  col_0: "classical mechanics"
+  col_1: "motion of macroscopic bodies under forces; Newton's framework"
+  col_2: null
+  col_3: null
+  col_4: null
+  col_5: null
+  col_6: null
+  col_7: null
+  col_8: null
+  --- values ---
+  v_0: 0, col: -1
+  v_1: 0, col: -1
+  v_2: 0, col: -1
+  v_3: 0, col: -1
+
+  --- first 5 entries ---
+  [0] col_0="classical mechanics" col_1="motion of macroscopic bodies under forces; Newton's framework"
+  [1] col_0="thermodynamics" col_1="heat, work, energy, entropy; macroscopic equilibrium systems"
+  [2] col_0="electromagnetism" col_1="electric and magnetic fields, charges, currents, radiation"
+  [3] col_0="optics" col_1="behavior of light; refraction, diffraction, interference, polari"
+  [4] col_0="special relativity" col_1="mechanics at velocities approaching c; Lorentz invariance; mass-"
+
+=== Prolog Query Test ===
+  KB: root.engineering.mechanical
+  relations: 176
+
+  Test 1: What does EC4 enable?
+  EC4 enables: 5 results
+    EC4 (electric motor) --enables--> PM5 (AC induction motor)
+    EC4 (electric motor) --enables--> PM6 (synchronous motor)
+    EC4 (electric motor) --enables--> PM7 (DC motor)
+    EC4 (electric motor) --enables--> PM8 (servo motor)
+    EC4 (electric motor) --enables--> PM9 (stepper motor)
+    PASS: 5/5 expected targets found
+
+  Test 2: What requires PU6?
+  requires PU6: 2 results
+    HS2 (closed-center (load-sensing) hydraulic system) --requires--> PU6 (piston pump (axial))
+    HS3 (closed-circuit (hydrostatic drive)) --requires--> PU6 (piston pump (axial))
+    PASS: 2/2 expected sources found
+
+  Test 3: What depends_on PM5? (inverse query)
+  depends_on PM5 (via enables inverse): 3 results
+    PM5 (AC induction motor) --enables--> PU1 (centrifugal pump)
+    PM5 (AC induction motor) --enables--> CP2 (rotary screw compressor)
+    PM5 (AC induction motor) --enables--> CP3 (centrifugal compressor)
+    PASS: 2/2 expected results found
+
+  Test 4: What does EC4 transitively enable?
+  EC4 enables (transitive): 9 results
+    EC4 (electric motor) --enables--> PM5 (AC induction motor)
+    EC4 (electric motor) --enables--> PM6 (synchronous motor)
+    EC4 (electric motor) --enables--> PM7 (DC motor)
+    EC4 (electric motor) --enables--> PM8 (servo motor)
+    EC4 (electric motor) --enables--> PM9 (stepper motor)
+    PM5 (AC induction motor) --enables--> PU1 (centrifugal pump)
+    PM5 (AC induction motor) --enables--> CP2 (rotary screw compressor)
+    PM5 (AC induction motor) --enables--> CP3 (centrifugal compressor)
+    PM8 (servo motor) --enables--> AC6 (electric linear actuator)
+    PASS: 5/5 direct + 2/2 chained targets found
+
+  Test 5: Symmetric relation check
+    FM7 prevents PU1: true
+    PU1 prevents FM7 (symmetric): true
+    PASS: symmetric relation works both directions
+
+  Test 6: All relations for HS5
+  HS5 all relations: 6 results
+    PU6 (piston pump (axial)) --enables--> HS5 (electrohydraulic servo system)
+    HS5 (electrohydraulic servo system) --requires--> VL18 (servo valve (hydraulic))
+    HS5 (electrohydraulic servo system) --requires--> SN13 (LVDT (linear variable differential transformer))
+    HS5 (electrohydraulic servo system) --requires--> CT6 (servo controller)
+    SN13 (LVDT (linear variable differential transformer)) --enables--> HS5 (electrohydraulic servo system)
+    CC14 (bulk modulus) --enables--> HS5 (electrohydraulic servo system)
+    PASS: 6 relations found for HS5
+
+  Test 7: Specialization chain VL18 ΓåÆ VL17 ΓåÆ VL16
+  VL18 specializes (transitive): 2 results
+    VL18 (servo valve (hydraulic)) --specializes--> VL17 (proportional valve (hydraulic))
+    VL17 (proportional valve (hydraulic)) --specializes--> VL16 (directional control valve (hydraulic))
+    PASS: VL17=true VL16=true
+
+  Test 8: What is part_of DM2?
+  part_of DM2: 3 results
+    GR1 (spur gear) --part_of--> DM2 (power transmission)
+    GR2 (helical gear) --part_of--> DM2 (power transmission)
+    GR7 (planetary (epicyclic) gear) --part_of--> DM2 (power transmission)
+    PASS: 3/3 expected parts found
+
+  Results: 8/8 tests passed
+  ALL PASS
+=== Prolog Query Test Complete ===
+http: server thread spawned on port 1138
+http: listening on 127.0.0.1:1138
+runner[0]: started
+runner[1]: started
+runner[2]: started
+runner_pool: spawned 4 runners
+runner[3]: started
+handler[0]: started
+handler[1]: started
+handler[2]: started
+accepter: spawned 4 handler threads
+handler[3]: started
