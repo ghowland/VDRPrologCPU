@@ -442,9 +442,12 @@ fn softmaxExact(
     for (0..count - 1) |i| {
         const s: i64 = @as(i64, shifted_out[i]);
         const s_sq: i64 = s * s;
-        // Divide first to keep values in range, then multiply by D
-        const ratio: i64 = @divTrunc(s_sq * 256, sum_sq);
-        const p: i64 = @divTrunc(ratio * D, 256);
+        // Divide by sum_sq first to get ratio in [0,1] range
+        // Then multiply by D to get probability
+        // Two-step to avoid overflow: get integer part and remainder separately
+        const ratio_int: i64 = @divTrunc(s_sq, sum_sq);
+        const ratio_rem: i64 = @mod(s_sq, sum_sq);
+        const p: i64 = ratio_int * D + @divTrunc(ratio_rem * D, sum_sq);
         const p_clamped: i64 = if (p < 0) 0 else if (p > D) D else p;
         output[i] = @intCast(p_clamped);
         running += p_clamped;
