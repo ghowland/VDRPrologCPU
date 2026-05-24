@@ -279,15 +279,39 @@ pub const SourceType = enum(i32) {
 pub const CACHE_LINE: usize = 64;
 
 pub const GemmCache = struct {
-    v_packed: []i32 = &.{}, // contiguous v fields, SIMD-ready
-    fact_count: i32 = 0, // entries in cache
+    v_packed: []i32 = &.{}, // entry_count × d_model, contiguous, SIMD-ready
+    ids: []VdrId = &.{}, // entry_count, parallel to v_packed at d_model stride
+    entry_count: i32 = 0, // number of tokens in this cache
+    d_model: i32 = 0, // dimensions per token embedding
     kb_id: VdrId = .{}, // source KB
-    kb_last_modified: i32 = 0, // timestamp at rebuild
+    kb_last_modified: i32 = 0, // timestamp at last rebuild
     generation: i32 = 0, // increments on rebuild
 
     pub fn isDirty(self: GemmCache, kb_modified: i32) bool {
         return kb_modified > self.kb_last_modified;
     }
+};
+
+pub const TrainingSequence = struct {
+    ids: []VdrId = &.{}, // the stripped token sequence
+    length: i32 = 0, // tokens in this sequence
+    source_kb_id: VdrId = .{}, // which KB group this trains
+    confidence: Q16 = .{}, // source quality (published vs user_stated)
+};
+
+pub const InferenceContext = struct {
+    prompt_ids: []VdrId = &.{}, // current token sequence (the prompt)
+    prompt_length: i32 = 0, // tokens in prompt
+    hidden_state: []i32 = &.{}, // 1 × d_model, the current query vector
+    scope_kb_ids: []VdrId = &.{}, // which KBs to search (GEMM scoping)
+    scope_count: i32 = 0, // number of KBs in scope
+    max_output_tokens: i32 = 64, // how many tokens to predict
+};
+
+pub const GemmScope = struct {
+    active_caches: []*GemmCache = &.{}, // caches to multiply against
+    active_count: i32 = 0, // number of active caches
+    total_entries: i32 = 0, // sum of entry_counts across active caches
 };
 
 // ============================================================
