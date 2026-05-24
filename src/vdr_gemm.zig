@@ -405,12 +405,7 @@ fn linearBackward(
 // Softmax (FRU — sums to D exactly)
 // ============================================================
 
-fn softmaxExact(
-    input: []const i32,
-    output: []i32,
-    shifted_out: []i32,
-    count: usize,
-) void {
+fn softmaxExact(input: []const i32, output: []i32, shifted_out: []i32, count: usize) void {
     // Find min
     var min_val: i32 = input[0];
     for (1..count) |i| {
@@ -420,8 +415,16 @@ fn softmaxExact(
     // Shift and square
     var sum_sq: i64 = 0;
     for (0..count) |i| {
-        shifted_out[i] = input[i] - min_val;
-        const s: i64 = @as(i64, shifted_out[i]);
+        const diff: i64 = @as(i64, input[i]) - @as(i64, min_val);
+        // Clamp to i32 range
+        const clamped: i32 = if (diff > std.math.maxInt(i32))
+            std.math.maxInt(i32)
+        else if (diff < 0)
+            0
+        else
+            @intCast(diff);
+        shifted_out[i] = clamped;
+        const s: i64 = @as(i64, clamped);
         sum_sq += s * s;
     }
 
