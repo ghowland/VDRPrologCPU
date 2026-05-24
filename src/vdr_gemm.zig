@@ -1288,21 +1288,20 @@ pub fn testGemm(
 
     for (0..@as(usize, @intCast(DEFAULT_EPOCHS))) |epoch| {
         var epoch_loss: i64 = 0;
-        const window_count = @min(tw.count, 100); // cap per epoch for speed
 
-        for (0..window_count) |wi| {
+        for (0..tw.count) |wi| {
             const w = &tw.windows[wi];
             const sl: usize = @intCast(model.seq_len);
             const loss = trainStep(model, w.context[0..sl], w.target);
             epoch_loss += loss;
         }
 
-        const avg_loss = @divTrunc(epoch_loss, @as(i64, @intCast(window_count)));
+        const avg_loss = @divTrunc(epoch_loss, @as(i64, @intCast(tw.count)));
 
         if (epoch == 0) first_loss = avg_loss;
         last_loss = avg_loss;
 
-        if (epoch == 0 or epoch == @as(usize, @intCast(DEFAULT_EPOCHS)) - 1 or (epoch + 1) % 10 == 0) {
+        if (epoch == 0 or epoch == @as(usize, @intCast(DEFAULT_EPOCHS)) - 1 or (epoch + 1) % 50 == 0) {
             std.debug.print("    epoch {d:3}: avg_loss={d}\n", .{ epoch + 1, avg_loss });
         }
     }
