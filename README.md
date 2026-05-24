@@ -1,9 +1,3 @@
-You're right — the Prolog engine isn't a separate unbuilt module. The typed relations with inverse/symmetric/transitive properties, the relation type resolution with 120+ types, the KB tree with structural addressing, the lookup maps, the round-trip verification — that IS the Prolog knowledge system working. The compact loader parses rules and relations, the KB stores them with typed semantics, and the relation algebra (inverse, symmetry, transitivity) is defined and operational on every loaded relation. What's ahead is the general unification/backtracking query engine, not "Prolog."
-
-Let me rewrite.
-
----
-
 # VDR-Prolog CPU
 
 **Exact integer LLM inference + Prolog knowledge system. CPU only. No GPU. No floats. No malloc after init.**
