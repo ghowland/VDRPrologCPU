@@ -259,6 +259,25 @@ fn create_kb_tree(global_arena: *types.Arena, config: *kb_config.KbConfig) void 
     const alloc = global_arena.allocator();
     var kbs_created: usize = 0;
 
+    // Track unique segments at each level to assign consistent indices
+    // L1 segments (after "root."): edu, programming, engineering, trades, etc.
+    // L2 segments: physics, chemistry, algorithms, etc.
+    // L3 segments: foundation, logic, human, military_tactics, etc.
+    var l1_names: [127][MAX_SEG]u8 = undefined;
+    var l1_lens: [127]usize = [_]usize{0} ** 127;
+    var l1_count: u7 = 0;
+
+    var l2_names: [127][255][MAX_SEG]u8 = undefined;
+    var l2_lens: [127][255]usize = undefined;
+    var l2_counts: [127]u8 = [_]u8{0} ** 127;
+
+    // Initialize l2 tracking
+    for (0..127) |x| {
+        for (0..255) |y| {
+            l2_lens[x][y] = 0;
+        }
+    }
+
     for (0..config.count) |i| {
         const kb = global_arena.allocTyped(types.KB) orelse {
             std.debug.print("kb_tree: arena full\n", .{});
@@ -267,6 +286,62 @@ fn create_kb_tree(global_arena: *types.Arena, config: *kb_config.KbConfig) void 
         kb.* = types.KB{};
         kb.lookup.facts = std.AutoHashMap(types.LookupId, i32).init(alloc);
         kb.lookup.relations = std.AutoHashMap(types.LookupId, i32).init(alloc);
+
+        // Parse dotted path into segments and assign VdrId
+        const dotted = config.entries[i].dottedSlice();
+        var segments: [6][MAX_SEG]u8 = undefined;
+        var seg_lens: [6]usize = [_]usize{0} ** 6;
+        var seg_count: usize = 0;
+        var spos: usize = 0;
+
+        // Split on '.'
+        while (spos < dotted.len and seg_count < 6) {
+            const dot = std.mem.indexOfScalarPos(u8, dotted, spos, '.');
+            const end = dot orelse dotted.len;
+            const seg = dotted[spos..end];
+            if (seg.len > 0 and seg.len <= MAX_SEG) {
+                @memcpy(segments[seg_count][0..seg.len], seg);
+                seg_lens[seg_count] = seg.len;
+                seg_count += 1;
+            }
+            if (dot) |d| {
+                spos = d + 1;
+            } else break;
+        }
+
+        // segments[0] = "root" (skip), segments[1] = L1, segments[2] = L2, segments[3] = L3
+        var l1_idx: u7 = 127; // sentinel
+        var l2_idx: u8 = 255; // sentinel
+        var l3_idx: u8 = 255; // sentinel
+
+        // Assign L1
+        if (seg_count > 1) {
+            l1_idx = findOrAddSegment(&l1_names, &l1_lens, &l1_count, segments[1][0..seg_lens[1]]);
+        }
+
+        // Assign L2
+        if (seg_count > 2 and l1_idx != 127) {
+            l2_idx = findOrAddL2(&l2_names, &l2_lens, &l2_counts, l1_idx, segments[2][0..seg_lens[2]]);
+        }
+
+        // Assign L3
+        // For simplicity, L3 uses a per-KB counter since we don't have many L3 entries
+        if (seg_count > 3 and l2_idx != 255) {
+            // Count how many KBs we've already seen with same L1+L2 and have L3
+            var l3_counter: u8 = 0;
+            for (0..i) |prev| {
+                const prev_dotted = config.entries[prev].dottedSlice();
+                const prev_kb = config.entries[prev].kb orelse continue;
+                const prev_s = prev_kb.id.structural();
+                if (prev_s.l1 == l1_idx and prev_s.l2 == l2_idx and prev_s.l3 != 255) {
+                    l3_counter += 1;
+                }
+                _ = prev_dotted;
+            }
+            l3_idx = l3_counter;
+        }
+
+        kb.id = types.VdrId.makeKb(0, l1_idx, l2_idx, l3_idx, 255, 255);
         config.entries[i].kb = kb;
         kbs_created += 1;
     }
@@ -274,6 +349,41 @@ fn create_kb_tree(global_arena: *types.Arena, config: *kb_config.KbConfig) void 
     std.debug.print("  KBs created: {}\n", .{kbs_created});
     std.debug.print("  arena used:  {} bytes\n", .{global_arena.usedBytes()});
     std.debug.print("  arena free:  {} bytes\n", .{global_arena.freeBytes()});
+}
+
+const MAX_SEG: usize = 64;
+
+fn findOrAddSegment(names: *[127][MAX_SEG]u8, lens: *[127]usize, count: *u7, seg: []const u8) u7 {
+    // Check if segment already exists
+    for (0..count.*) |idx| {
+        if (lens.*[idx] == seg.len and std.mem.eql(u8, names.*[idx][0..lens.*[idx]], seg)) {
+            return @intCast(idx);
+        }
+    }
+    // Add new
+    if (count.* >= 127) return 127; // sentinel, full
+    const idx = count.*;
+    @memcpy(names.*[idx][0..seg.len], seg);
+    lens.*[idx] = seg.len;
+    count.* += 1;
+    return idx;
+}
+
+fn findOrAddL2(names: *[127][255][MAX_SEG]u8, lens: *[127][255]usize, counts: *[127]u8, l1: u7, seg: []const u8) u8 {
+    const l1i: usize = @intCast(l1);
+    // Check if segment already exists under this L1
+    for (0..counts.*[l1i]) |idx| {
+        if (lens.*[l1i][idx] == seg.len and std.mem.eql(u8, names.*[l1i][idx][0..lens.*[l1i][idx]], seg)) {
+            return @intCast(idx);
+        }
+    }
+    // Add new
+    if (counts.*[l1i] >= 255) return 255; // sentinel, full
+    const idx = counts.*[l1i];
+    @memcpy(names.*[l1i][idx][0..seg.len], seg);
+    lens.*[l1i][idx] = seg.len;
+    counts.*[l1i] += 1;
+    return idx;
 }
 
 fn populate_kb_data(global_arena: *types.Arena, config: *kb_config.KbConfig) void {
