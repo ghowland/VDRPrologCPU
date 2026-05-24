@@ -563,8 +563,8 @@ pub const KB = struct {
     walk_id: i32 = 0,
 
     // Provenance.source_id the final VdrStructuralId.item_id that is the index to this array
-    data: []KBData align(64) = &[_]KBData{},
-    data_q335: []KBDataQ335 align(64) = &[_]KBDataQ335{},
+    data: ?std.array_list.Managed(KBData) = null,
+    data_q335: ?std.array_list.Managed(KBDataQ335) = null,
 
     // This is how we lookup any type of data, by KBEntryType
     lookup: KbLookup = KbLookup{},
@@ -736,7 +736,6 @@ pub const KB = struct {
             .constraint => &self.next_constraint_id,
             .grammar => &self.next_grammar_id,
             .relation => &self.next_relation_id,
-            .domain_relation => &self.next_domain_relation_id,
             .lru => &self.next_lru_id,
             .counter => &self.next_counter_id,
             .lock => &self.next_lock_id,
@@ -746,7 +745,13 @@ pub const KB = struct {
             .bitset => &self.next_bitset_id,
             .iose => &self.next_iose_id,
             .data => {
-                const value: u20 = @intCast(self.data.len);
+                if (self.data == null) return 0;
+                const value: u20 = @intCast(self.data.?.items.len);
+                return value;
+            },
+            .data_q335 => {
+                if (self.data_q335 == null) return 0;
+                const value: u20 = @intCast(self.data_q335.?.items.len);
                 return value;
             },
         };
