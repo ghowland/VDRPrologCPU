@@ -442,21 +442,31 @@ fn softmaxExact(input: []const i32, output: []i32, shifted_out: []i32, count: us
 
     // N-1 values via divTrunc, last = D - sum
     var running: i64 = 0;
+    const d_i64: i64 = @as(i64, D);
     for (0..count - 1) |i| {
         const s: i64 = @as(i64, shifted_out[i]);
         const s_sq: i64 = s * s;
-        // Divide by sum_sq first to get ratio in [0,1] range
-        // Then multiply by D to get probability
-        // Two-step to avoid overflow: get integer part and remainder separately
-        const ratio_int: i64 = @divTrunc(s_sq, sum_sq);
-        const ratio_rem: i64 = @mod(s_sq, sum_sq);
-        const p: i64 = ratio_int * D + @divTrunc(ratio_rem * D, sum_sq);
-        const p_clamped: i64 = if (p < 0) 0 else if (p > D) D else p;
+        // Compute s_sq * D / sum_sq without overflow
+        // Break D into 256 * 256, do two rounds
+        const step1: i64 = @divTrunc(s_sq * 256, sum_sq);
+        const step2: i64 = @divTrunc(step1 * 256, 1);
+        // But step1 can still overflow...
+        // Safest: reduce s_sq and sum_sq by common shift first
+        _ = step2;
+
+        // Find how many bits we can shift both down
+        var sq_local = sum_sq;
+        var s_sq_local = s_sq;
+        while (sq_local > std.math.maxInt(i32) and sq_local > 1) {
+            sq_local = sq_local >> 1;
+            s_sq_local = s_sq_local >> 1;
+        }
+        const p: i64 = if (sq_local == 0) 0 else @divTrunc(s_sq_local * d_i64, sq_local);
+        const p_clamped: i64 = if (p < 0) 0 else if (p > d_i64) d_i64 else p;
         output[i] = @intCast(p_clamped);
         running += p_clamped;
     }
-    // FRU: last element gets the remainder
-    const last_val: i64 = D - running;
+    const last_val: i64 = d_i64 - running;
     output[count - 1] = @intCast(if (last_val < 0) 0 else last_val);
 }
 
