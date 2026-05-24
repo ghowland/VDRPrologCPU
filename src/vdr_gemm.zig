@@ -441,11 +441,17 @@ fn softmaxExact(
     var running: i64 = 0;
     for (0..count - 1) |i| {
         const s: i64 = @as(i64, shifted_out[i]);
-        const p: i64 = @divTrunc(s * s * D, sum_sq);
-        output[i] = @intCast(p);
-        running += p;
+        const s_sq: i64 = s * s;
+        // Divide first to keep values in range, then multiply by D
+        const ratio: i64 = @divTrunc(s_sq * 256, sum_sq);
+        const p: i64 = @divTrunc(ratio * D, 256);
+        const p_clamped: i64 = if (p < 0) 0 else if (p > D) D else p;
+        output[i] = @intCast(p_clamped);
+        running += p_clamped;
     }
-    output[count - 1] = @intCast(D - running);
+    // FRU: last element gets the remainder
+    const last_val: i64 = D - running;
+    output[count - 1] = @intCast(if (last_val < 0) 0 else last_val);
 }
 
 // ============================================================
