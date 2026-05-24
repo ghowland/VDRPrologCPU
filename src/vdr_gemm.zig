@@ -249,6 +249,12 @@ pub fn trainFromRelationsWithArena(
 ) i32 {
     var pairs_trained: i32 = 0;
     const d: usize = @intCast(cache.d_model);
+    const entry_count: usize = @intCast(cache.entry_count);
+
+    if (entry_count < 2) return 0;
+
+    // Simple PRNG for negative sampling
+    var rng_state: u64 = 12345;
 
     for (0..@as(usize, @intCast(TRAIN_EPOCHS))) |_| {
         for (0..load_result.relationship_count) |ri| {
@@ -258,29 +264,37 @@ pub fn trainFromRelationsWithArena(
             const from_text = rel.fromSlice();
             const to_text = rel.toSlice();
 
-            const from_idx = findEntryByEntityIdWithArena(load_result, arena_base, from_text);
-            const to_idx = findEntryByEntityIdWithArena(load_result, arena_base, to_text);
+            const from_idx = findEntryByEntityIdWithArena(load_result, arena_base, from_text) orelse continue;
+            const to_idx = findEntryByEntityIdWithArena(load_result, arena_base, to_text) orelse continue;
 
-            if (from_idx == null or to_idx == null) continue;
+            if (from_idx >= entry_count or to_idx >= entry_count) continue;
 
-            const from_emb = getEmbedding(cache, from_idx.?);
-            const to_emb = getEmbedding(cache, to_idx.?);
+            const from_emb = getEmbedding(cache, from_idx);
+            const to_emb = getEmbedding(cache, to_idx);
+
+            // Positive: pull from and to toward each other (proportional)
+            for (0..d) |dim| {
+                const diff: i32 = to_emb[dim] - from_emb[dim];
+                const step: i32 = @intCast(@divTrunc(@as(i64, diff) * LEARNING_RATE, 1000));
+                from_emb[dim] += step;
+                to_emb[dim] -= step;
+            }
+
+            // Negative: push from AWAY from a random non-related entry
+            rng_state = rng_state *% 6364136223846793005 +% 1442695040888963407;
+            var neg_idx: usize = @intCast(@mod(rng_state >> 16, @as(u64, entry_count)));
+            if (neg_idx == from_idx or neg_idx == to_idx) {
+                neg_idx = (neg_idx + 1) % entry_count;
+            }
+
+            const neg_emb = getEmbedding(cache, neg_idx);
 
             for (0..d) |dim| {
-                const diff_fwd = to_emb[dim] - from_emb[dim];
-                const diff_bwd = from_emb[dim] - to_emb[dim];
-
-                if (diff_fwd > 0) {
-                    from_emb[dim] += LEARNING_RATE;
-                } else if (diff_fwd < 0) {
-                    from_emb[dim] -= LEARNING_RATE;
-                }
-
-                if (diff_bwd > 0) {
-                    to_emb[dim] += LEARNING_RATE;
-                } else if (diff_bwd < 0) {
-                    to_emb[dim] -= LEARNING_RATE;
-                }
+                const diff: i32 = neg_emb[dim] - from_emb[dim];
+                const step: i32 = @intCast(@divTrunc(@as(i64, diff) * LEARNING_RATE, 2000));
+                // Push apart: subtract instead of add
+                from_emb[dim] -= step;
+                neg_emb[dim] += step;
             }
 
             pairs_trained += 1;
