@@ -14,6 +14,8 @@ All memory is pre-allocated at startup as fixed-size arenas. No malloc after ini
 
 The ML approach is SNK (Structured Neural Knowledge) — a single-block integer transformer trained contrastively over a vocabulary of structural entity IDs drawn from the knowledge base tree. The model predicts the next VdrId from a set of valid KB addresses, not text tokens. It cannot hallucinate a nonexistent entity because every possible output maps to a real KB entry.
 
+**Project Overview:** [https://sireus.cloud/vdr-llm-prolog/](https://sireus.cloud/vdr-llm-prolog/)
+
 ---
 
 ## Current Status
