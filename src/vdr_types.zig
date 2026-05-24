@@ -140,8 +140,8 @@ pub const D32: i64 = 4294967296;
 
 pub const Q16 = struct {
     v: i32 = 0,
-    r0: i16 = 0,
-    r1: i16 = 0,
+    r0: u16 = 0,
+    r1: u16 = 0,
 
     pub const D: i32 = D16;
 
@@ -152,17 +152,17 @@ pub const Q16 = struct {
         return .{ .v = D16 };
     }
 
-    pub fn fromParts(v: i32, r0: i16, r1: i16) Q16 {
+    pub fn fromParts(v: i32, r0: u16, r1: u16) Q16 {
         return .{ .v = v, .r0 = r0, .r1 = r1 };
     }
 
     pub fn add(a: Q16, b: Q16) Q16 {
         const r1_sum: i32 = @as(i32, a.r1) + @as(i32, b.r1);
         const r1_carry: i32 = @divTrunc(r1_sum, 32768);
-        const new_r1: i16 = @intCast(@mod(r1_sum, 32768));
+        const new_r1: u16 = @intCast(@mod(r1_sum, 32768));
         const r0_sum: i32 = @as(i32, a.r0) + @as(i32, b.r0) + r1_carry;
         const r0_carry: i64 = if (r0_sum >= D16) 1 else 0;
-        const new_r0: i16 = @intCast(@mod(r0_sum, D16));
+        const new_r0: u16 = @intCast(@mod(r0_sum, D16));
         const new_v: i32 = @intCast(@as(i64, a.v) + @as(i64, b.v) + r0_carry);
         return .{ .v = new_v, .r0 = new_r0, .r1 = new_r1 };
     }

@@ -22,8 +22,11 @@ const Arena = types.Arena;
 const DEFAULT_D_MODEL: i32 = 32;
 const DEFAULT_SEQ_LEN: i32 = 4;
 const DEFAULT_FFN_DIM: i32 = 64;
-const DEFAULT_EPOCHS: i32 = 50;
-const DEFAULT_LR: i32 = 512; // ~1/128 in Q16
+// const DEFAULT_EPOCHS: i32 = 50;
+// const DEFAULT_LR: i32 = 512; // ~1/128 in Q16
+// const DEFAULT_LR: i32 = 4096; // ~1/16 in Q16, much more aggressive
+const DEFAULT_EPOCHS: i32 = 200;
+const DEFAULT_LR: i32 = 8192; // ~1/8 in Q16
 const D: i32 = types.D16; // 65536
 
 // ============================================================
@@ -273,24 +276,24 @@ pub fn createModel(
         .vocab_size = vs,
     };
 
-    // Initialize weights
+    // Initialize weights — scale down for larger vocab
     var rng = LCG.init(seed);
-    initWeightsQ16(model.token_emb, &rng, 4096);
-    initWeightsQ16(model.pos_emb, &rng, 4096);
-    initWeightsQ16(model.wq, &rng, 4096);
-    initBiasQ16(model.wq_b, &rng, 4096);
-    initWeightsQ16(model.wk, &rng, 4096);
-    initBiasQ16(model.wk_b, &rng, 4096);
-    initWeightsQ16(model.wv, &rng, 4096);
-    initBiasQ16(model.wv_b, &rng, 4096);
-    initWeightsQ16(model.wo, &rng, 4096);
-    initBiasQ16(model.wo_b, &rng, 4096);
-    initWeightsQ16(model.ffn1, &rng, 4096);
-    initBiasQ16(model.ffn1_b, &rng, 4096);
-    initWeightsQ16(model.ffn2, &rng, 4096);
-    initBiasQ16(model.ffn2_b, &rng, 4096);
-    initWeightsQ16(model.out_w, &rng, 4096);
-    initBiasQ16(model.out_b, &rng, 4096);
+    initWeightsQ16(model.token_emb, &rng, 1024);
+    initWeightsQ16(model.pos_emb, &rng, 1024);
+    initWeightsQ16(model.wq, &rng, 512);
+    initBiasQ16(model.wq_b, &rng, 256);
+    initWeightsQ16(model.wk, &rng, 512);
+    initBiasQ16(model.wk_b, &rng, 256);
+    initWeightsQ16(model.wv, &rng, 512);
+    initBiasQ16(model.wv_b, &rng, 256);
+    initWeightsQ16(model.wo, &rng, 512);
+    initBiasQ16(model.wo_b, &rng, 256);
+    initWeightsQ16(model.ffn1, &rng, 512);
+    initBiasQ16(model.ffn1_b, &rng, 256);
+    initWeightsQ16(model.ffn2, &rng, 512);
+    initBiasQ16(model.ffn2_b, &rng, 256);
+    initWeightsQ16(model.out_w, &rng, 512);
+    initBiasQ16(model.out_b, &rng, 256);
 
     // Zero gradients
     zeroGrad(model);
@@ -359,7 +362,7 @@ fn linearForward(
             std.math.minInt(i32)
         else
             @intCast(v_raw);
-        const r_clamped: i16 = if (r_raw > 32767) 32767 else if (r_raw < -32768) -32768 else @intCast(r_raw);
+        const r_clamped: u16 = @intCast(r_raw);
         output[i] = Q16.fromParts(v_clamped, r_clamped, 0);
     }
 }
@@ -405,18 +408,24 @@ fn linearBackward(
 // Softmax (FRU — sums to D exactly)
 // ============================================================
 
-fn softmaxExact(input: []const i32, output: []i32, shifted_out: []i32, count: usize) void {
+fn softmaxExact(
+    input: []const i32,
+    output: []i32,
+    shifted_out: []i32,
+    count: usize,
+) void {
+    const d_i64: i64 = @as(i64, D);
+
     // Find min
     var min_val: i32 = input[0];
     for (1..count) |i| {
         if (input[i] < min_val) min_val = input[i];
     }
 
-    // Shift and square
-    var sum_sq: i64 = 0;
+    // Shift and find max shifted value
+    var max_shifted: i64 = 0;
     for (0..count) |i| {
         const diff: i64 = @as(i64, input[i]) - @as(i64, min_val);
-        // Clamp to i32 range
         const clamped: i32 = if (diff > std.math.maxInt(i32))
             std.math.maxInt(i32)
         else if (diff < 0)
@@ -424,48 +433,62 @@ fn softmaxExact(input: []const i32, output: []i32, shifted_out: []i32, count: us
         else
             @intCast(diff);
         shifted_out[i] = clamped;
-        const s: i64 = @as(i64, clamped);
+        if (@as(i64, clamped) > max_shifted) max_shifted = @as(i64, clamped);
+    }
+
+    // Compute right-shift to keep count * (max >> shift)^2 in i64 range
+    var shift: u6 = 0;
+    if (max_shifted > 0) {
+        var test_max = max_shifted;
+        const limit: i64 = @divTrunc(std.math.maxInt(i64), @as(i64, @intCast(count)) + 1);
+        while (test_max > 0 and test_max * test_max > limit) {
+            test_max = test_max >> 1;
+            shift += 1;
+        }
+    }
+
+    // Sum of squares with shift applied
+    var sum_sq: i64 = 0;
+    for (0..count) |i| {
+        const s: i64 = @as(i64, shifted_out[i]) >> shift;
         sum_sq += s * s;
     }
 
+    // Uniform fallback if all values equal
     if (sum_sq == 0) {
-        const uniform: i32 = @intCast(@divTrunc(@as(i64, D), @as(i64, @intCast(count))));
+        const uniform: i32 = @intCast(@divTrunc(d_i64, @as(i64, @intCast(count))));
         for (0..count) |i| {
             output[i] = uniform;
         }
-        // FRU: assign remainder to first
         const total: i64 = @as(i64, uniform) * @as(i64, @intCast(count));
-        const deficit: i32 = @intCast(D - total);
+        const deficit: i32 = @intCast(d_i64 - total);
         output[0] += deficit;
         return;
     }
 
-    // N-1 values via divTrunc, last = D - sum
+    // Compute probabilities: p[i] = s[i]^2 * D / sum_sq
+    // Using same shift for numerator and denominator preserves ratio
+    // Further reduce s_sq and sum_sq together if product with D would overflow
     var running: i64 = 0;
-    const d_i64: i64 = @as(i64, D);
     for (0..count - 1) |i| {
-        const s: i64 = @as(i64, shifted_out[i]);
-        const s_sq: i64 = s * s;
-        // Compute s_sq * D / sum_sq without overflow
-        // Break D into 256 * 256, do two rounds
-        const step1: i64 = @divTrunc(s_sq * 256, sum_sq);
-        const step2: i64 = @divTrunc(step1 * 256, 1);
-        // But step1 can still overflow...
-        // Safest: reduce s_sq and sum_sq by common shift first
-        _ = step2;
+        const s: i64 = @as(i64, shifted_out[i]) >> shift;
+        var s_sq_local: i64 = s * s;
+        var sq_local: i64 = sum_sq;
 
-        // Find how many bits we can shift both down
-        var sq_local = sum_sq;
-        var s_sq_local = s_sq;
-        while (sq_local > std.math.maxInt(i32) and sq_local > 1) {
-            sq_local = sq_local >> 1;
+        // Reduce until s_sq_local * D fits in i64
+        while (s_sq_local > std.math.maxInt(i32) and sq_local > 1) {
             s_sq_local = s_sq_local >> 1;
+            sq_local = sq_local >> 1;
         }
-        const p: i64 = if (sq_local == 0) 0 else @divTrunc(s_sq_local * d_i64, sq_local);
+        if (sq_local == 0) sq_local = 1;
+
+        const p: i64 = @divTrunc(s_sq_local * d_i64, sq_local);
         const p_clamped: i64 = if (p < 0) 0 else if (p > d_i64) d_i64 else p;
         output[i] = @intCast(p_clamped);
         running += p_clamped;
     }
+
+    // FRU: last element gets remainder so sum = D exactly
     const last_val: i64 = d_i64 - running;
     output[count - 1] = @intCast(if (last_val < 0) 0 else last_val);
 }
@@ -481,9 +504,27 @@ fn softmaxBackward(
     grad_scores: []i32,
     count: usize,
 ) void {
+    // Find max shifted to compute safe shift amount
+    var max_shifted: i64 = 0;
+    for (0..count) |i| {
+        const abs_s: i64 = if (shifted[i] < 0) -@as(i64, shifted[i]) else @as(i64, shifted[i]);
+        if (abs_s > max_shifted) max_shifted = abs_s;
+    }
+
+    var shift: u6 = 0;
+    if (max_shifted > 0) {
+        var test_max = max_shifted;
+        const limit: i64 = @divTrunc(std.math.maxInt(i64), @as(i64, @intCast(count)) + 1);
+        while (test_max > 0 and test_max * test_max > limit) {
+            test_max = test_max >> 1;
+            shift += 1;
+        }
+    }
+
     var sum_sq: i64 = 0;
     for (0..count) |i| {
-        sum_sq += @as(i64, shifted[i]) * @as(i64, shifted[i]);
+        const s: i64 = @as(i64, shifted[i]) >> shift;
+        sum_sq += s * s;
     }
 
     if (sum_sq == 0) {
@@ -498,8 +539,23 @@ fn softmaxBackward(
 
     for (0..count) |i| {
         const diff: i64 = @as(i64, grad_probs[i]) * D - dot_gp;
-        const numer: i64 = 2 * @as(i64, shifted[i]) * diff;
-        grad_scores[i] = @intCast(@divTrunc(numer, sum_sq));
+        const s: i64 = @as(i64, shifted[i]) >> shift;
+        const numer: i64 = 2 * s * diff;
+        // Reduce numer and sum_sq together if numer too large for divTrunc
+        var numer_local: i64 = numer;
+        var sq_local: i64 = sum_sq;
+        while ((numer_local > std.math.maxInt(i32) or numer_local < std.math.minInt(i32)) and sq_local > 1) {
+            numer_local = numer_local >> 1;
+            sq_local = sq_local >> 1;
+        }
+        if (sq_local == 0) sq_local = 1;
+        const result: i64 = @divTrunc(numer_local, sq_local);
+        grad_scores[i] = if (result > std.math.maxInt(i32))
+            std.math.maxInt(i32)
+        else if (result < std.math.minInt(i32))
+            std.math.minInt(i32)
+        else
+            @intCast(result);
     }
 }
 
