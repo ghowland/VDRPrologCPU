@@ -563,8 +563,26 @@ pub const KB = struct {
     walk_id: i32 = 0,
 
     // Provenance.source_id the final VdrStructuralId.item_id that is the index to this array
+    // Storage
     data: ?std.array_list.Managed(KBData) = null,
     data_q335: ?std.array_list.Managed(KBDataQ335) = null,
+    facts: ?std.array_list.Managed(Fact) = null,
+    rules: ?std.array_list.Managed(Rule) = null,
+    constraints: ?std.array_list.Managed(Constraint) = null,
+    grammars: ?std.array_list.Managed(GrammarRule) = null,
+
+    // Computation
+    lru_entries: ?std.array_list.Managed(LruEntry) = null,
+    counters: ?std.array_list.Managed(CounterEntry) = null,
+    locks: ?std.array_list.Managed(LockEntry) = null,
+    queues: ?std.array_list.Managed(QueueEntry) = null,
+    stacks: ?std.array_list.Managed(StackEntry) = null,
+    rings: ?std.array_list.Managed(RingEntry) = null,
+    bitsets: ?std.array_list.Managed(BitsetEntry) = null,
+
+    // Structure
+    iose_entries: ?std.array_list.Managed(IoSe) = null,
+    relations: ?std.array_list.Managed(TypedRelation) = null,
 
     // This is how we lookup any type of data, by KBEntryType
     lookup: KbLookup = KbLookup{},
@@ -767,21 +785,23 @@ pub const VdrValue = struct {
     entry_type: KBEntryType = .kb,
     ok: bool = false,
 
+    // Values
     kb: ?*KB = null,
+    data: ?*KBData = null,
+    data_q335: ?*KBDataQ335 = null,
     fact: ?*Fact = null,
     rule: ?*Rule = null,
-    constraint: ?*Fact = null,
-    grammar: ?*Grammar = null,
-    lru: ?*Fact = null,
-    counter_entry: ?*Fact = null,
-    lock: ?*Fact = null,
-    queue: ?*Fact = null,
-    stack: ?*Fact = null,
-    ring: ?*Fact = null,
-    bitset: ?*Fact = null,
+    constraint: ?*Constraint = null,
+    grammar: ?*GrammarRule = null,
+    lru: ?*LruEntry = null,
+    counter_entry: ?*CounterEntry = null,
+    lock: ?*LockEntry = null,
+    queue: ?*QueueEntry = null,
+    stack: ?*StackEntry = null,
+    ring: ?*RingEntry = null,
+    bitset: ?*BitsetEntry = null,
     iose: ?*IoSe = null,
     relation: ?*TypedRelation = null,
-    domain_relation: ?*TypedRelation = null,
 
     pub fn failed() VdrValue {
         return .{};
@@ -846,6 +866,115 @@ pub const VdrValue = struct {
     pub fn fromBitset(id: VdrId, f: *Fact) VdrValue {
         return .{ .id = id, .entry_type = .bitset, .ok = true, .bitset = f };
     }
+    pub fn fromData(id: VdrId, d: *KBData) VdrValue {
+        return .{ .id = id, .entry_type = .data, .ok = true, .data = d };
+    }
+
+    pub fn fromDataQ335(id: VdrId, d: *KBDataQ335) VdrValue {
+        return .{ .id = id, .entry_type = .data_q335, .ok = true, .data_q335 = d };
+    }
+};
+
+pub const Constraint = struct {
+    id: VdrId = .{},
+    head: i32 = -1, // term offset for head
+    body: i32 = -1, // term offset for body
+    grant_class: i8 = -1, // which grant class this constrains (-1 = any)
+    is_allow: bool = true, // true = allow rule, false = deny rule
+    fire_count: i32 = 0,
+    deny_count: i32 = 0,
+    allow_count: i32 = 0,
+    creator: VdrId = .{},
+    created_at: i32 = 0,
+};
+
+pub const GrammarRule = struct {
+    id: VdrId = .{},
+    pivot_id: VdrId = .{}, // structural pivot — same for matches and generates
+    direction: GrammarDirection = .both,
+    relation_type: RelationType = .unknown, // what relation this renders
+    constraint_mask: u64 = 0, // bitmask of structural constraints present
+    slot_count: u8 = 0,
+    slots: [8]GrammarSlotDef = undefined,
+    fixed_word_count: u8 = 0,
+    fixed_words: [16]u16 = undefined, // vocabulary IDs for structural words
+    word_order: [16]u8 = undefined, // rendering sequence
+    register_id: VdrId = .{},
+    strength: Q16 = .{},
+    provenance: Provenance = .{},
+};
+
+pub const GrammarDirection = enum(u8) {
+    matches = 0, // parse only
+    generates = 1, // generate only
+    both = 2, // bidirectional
+};
+
+pub const GrammarSlotDef = struct {
+    slot_type: u8 = 0, // entity, verb, adverb, adjective, preposition, etc.
+    entry_type: KBEntryType = .data, // what VdrId entry type fills this slot
+    vocab_group_id: VdrId = .{}, // vocabulary group for this slot (NONE = any)
+    required: bool = true,
+};
+
+pub const LruEntry = struct {
+    id: VdrId = .{},
+    target_id: VdrId = .{}, // what entity this LRU entry tracks
+    last_accessed: i32 = 0, // timestamp of last access
+    access_count: i32 = 0, // total accesses
+    priority: Q16 = .{}, // eviction priority (lower = evict first)
+    is_pinned: bool = false, // pinned entries never evict
+};
+
+pub const CounterEntry = struct {
+    id: VdrId = .{},
+    name_offset: i32 = 0,
+    name_length: i16 = 0,
+    value: Q16 = .{}, // current count
+    initial_value: Q16 = .{}, // reset target
+    min_value: Q16 = .{}, // floor
+    max_value: Q16 = .{}, // ceiling (0 = unlimited)
+    is_monotonic: bool = false, // true = can only increment
+    last_modified: i32 = 0,
+};
+
+pub const LockEntry = struct {
+    id: VdrId = .{},
+    target_id: VdrId = .{}, // what entity is locked
+    holder_id: VdrId = .{}, // who holds the lock (session/runner VdrId)
+    acquired_at: i32 = 0,
+    timeout: i32 = 0, // auto-release after this many seconds (0 = manual)
+    is_held: bool = false,
+};
+
+pub const QueueEntry = struct {
+    id: VdrId = .{},
+    payload_id: VdrId = .{}, // the entity being queued
+    enqueued_at: i32 = 0,
+    priority: Q16 = .{}, // 0 = no priority, use FIFO order
+    is_consumed: bool = false, // soft delete — consumed entries skipped
+};
+
+pub const StackEntry = struct {
+    id: VdrId = .{},
+    payload_id: VdrId = .{}, // the entity being stacked
+    pushed_at: i32 = 0,
+    is_popped: bool = false, // soft delete
+};
+
+pub const RingEntry = struct {
+    id: VdrId = .{},
+    payload_id: VdrId = .{},
+    written_at: i32 = 0,
+    sequence: i32 = 0, // monotonic write sequence number
+};
+
+pub const BitsetEntry = struct {
+    id: VdrId = .{},
+    domain_id: VdrId = .{}, // what entity space this bitset covers
+    bits: [64]u64 = .{0} ** 64, // 4096 bits
+    bit_count: u32 = 0, // how many bits are meaningful
+    set_count: u32 = 0, // how many are currently set (cached)
 };
 
 // ============================================================

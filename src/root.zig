@@ -9,7 +9,9 @@ const compact_loader = @import("vdr_compact_loader.zig");
 const kb_config = @import("vdr_kb_config.zig");
 
 // Types
-const Text = @import("text_big.zig").Text;
+const TextBig = @import("text_big.zig").TextBig;
+const text_small = @import("text_small.zig");
+const TextSmall = text_small.TextSmall;
 
 pub fn main() void {
     std.debug.print("VDR-Prolog kernel starting\n", .{});
@@ -98,6 +100,10 @@ pub fn main() void {
     // Create and Populate tree
     create_kb_tree(global_arena, config);
     populate_kb_data(global_arena, config);
+
+    // Populate KBData columns and verify
+    populate_kb_data_columns(global_arena, config);
+    verify_kb_data_lookup(config);
 
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);
@@ -313,4 +319,217 @@ fn populate_kb_data(global_arena: *types.Arena, config: *kb_config.KbConfig) voi
 
     std.debug.print("\n  total facts:     {}\n", .{total_facts});
     std.debug.print("  total relations: {}\n", .{total_rels});
+}
+
+fn populate_kb_data_columns(global_arena: *types.Arena, config: *kb_config.KbConfig) void {
+    std.debug.print("\n=== Populating KBData Columns ===\n", .{});
+
+    const alloc = global_arena.allocator();
+    var total_data_entries: usize = 0;
+
+    for (0..config.count) |i| {
+        const entry = &config.entries[i];
+        const result = entry.load_result orelse continue;
+        const kb = entry.kb orelse continue;
+
+        if (kb.data == null) {
+            kb.data = std.array_list.Managed(types.KBData).init(alloc);
+        }
+
+        var kb_data_count: usize = 0;
+
+        for (0..result.table_count) |ti| {
+            const table = &result.tables[ti];
+
+            for (0..table.row_count) |ri| {
+                const row_text = table.rowText(ri, global_arena.base);
+                if (row_text.len == 0) continue;
+
+                const lid = kb.mintLookupId(.data) orelse break;
+                const data_id = types.VdrId.makeItem(kb.id, .data, lid);
+
+                var kbdata = types.KBData{};
+                kbdata.id = data_id;
+
+                // Split row_text by '|' and fill text columns, skipping column 0 (entity ID)
+                var col_index: usize = 0;
+                var data_col: usize = 0;
+                var pos: usize = 0;
+
+                while (pos <= row_text.len) {
+                    const pipe = std.mem.indexOfScalarPos(u8, row_text, pos, '|');
+                    const end = pipe orelse row_text.len;
+                    const col_text = std.mem.trim(u8, row_text[pos..end], " ");
+
+                    if (col_index > 0) { // skip column 0 (entity ID)
+                        if (data_col <= 8 and col_text.len > 0) {
+                            var value = types.KBDataValue{};
+                            var small = TextSmall{};
+                            const copy_len = @min(col_text.len, text_small.TEXT_LEN_MAX);
+                            @memcpy(small.text[0..copy_len], col_text[0..copy_len]);
+                            small.len = copy_len;
+                            value.text = small;
+                            setTextColumn(&kbdata, data_col, value);
+                        }
+                        data_col += 1;
+                    }
+
+                    col_index += 1;
+                    if (pipe) |p| {
+                        pos = p + 1;
+                    } else break;
+                }
+
+                kb.data.?.append(kbdata) catch {
+                    std.debug.print("  {s}: append failed at row {}\n", .{ entry.dottedSlice(), ri });
+                    break;
+                };
+
+                kb_data_count += 1;
+            }
+        }
+
+        std.debug.print("  {s}: {d} data entries\n", .{ entry.dottedSlice(), kb_data_count });
+        total_data_entries += kb_data_count;
+    }
+
+    std.debug.print("\n  total data entries: {}\n", .{total_data_entries});
+    std.debug.print("  arena used:        {} bytes\n", .{global_arena.usedBytes()});
+    std.debug.print("  arena free:        {} bytes\n", .{global_arena.freeBytes()});
+}
+
+fn setTextColumn(kbdata: *types.KBData, col_index: usize, value: types.KBDataValue) void {
+    switch (col_index) {
+        0 => kbdata.text_column_0 = value,
+        1 => kbdata.text_column_1 = value,
+        2 => kbdata.text_column_2 = value,
+        3 => kbdata.text_column_3 = value,
+        4 => kbdata.text_column_4 = value,
+        5 => kbdata.text_column_5 = value,
+        6 => kbdata.text_column_6 = value,
+        7 => kbdata.text_column_7 = value,
+        8 => kbdata.text_column_8 = value,
+        else => {},
+    }
+}
+
+fn getVdrValue(config: *kb_config.KbConfig, id: types.VdrId) types.VdrValue {
+    if (id.isNone()) return types.VdrValue.failed();
+
+    const s = id.structural();
+    const entry_type: types.KBEntryType = @enumFromInt(s.entry_type);
+
+    // Find host KB by matching structural path
+    var host_kb: ?*types.KB = null;
+    for (0..config.count) |i| {
+        const kb = config.entries[i].kb orelse continue;
+        const kb_s = kb.id.structural();
+        if (kb_s.l1 == s.l1 and kb_s.l2 == s.l2 and kb_s.l3 == s.l3 and
+            kb_s.l4 == s.l4 and kb_s.l5 == s.l5)
+        {
+            host_kb = kb;
+            break;
+        }
+    }
+
+    const kb = host_kb orelse return types.VdrValue.failed();
+    const item_id = s.item_id;
+
+    switch (entry_type) {
+        .kb => return types.VdrValue.fromKb(id, kb),
+
+        .data => {
+            if (kb.data) |data_list| {
+                if (item_id < data_list.items.len) {
+                    return types.VdrValue.fromData(id, &data_list.items[item_id]);
+                }
+            }
+            return types.VdrValue.failed();
+        },
+
+        .data_q335 => {
+            if (kb.data_q335) |data_list| {
+                if (item_id < data_list.items.len) {
+                    return types.VdrValue.fromDataQ335(id, &data_list.items[item_id]);
+                }
+            }
+            return types.VdrValue.failed();
+        },
+
+        .fact => {
+            if (kb.lookup.facts) |facts_map| {
+                if (facts_map.get(item_id)) |_| {
+                    return types.VdrValue{ .id = id, .entry_type = .fact, .ok = true };
+                }
+            }
+            return types.VdrValue.failed();
+        },
+
+        .relation => {
+            if (kb.lookup.relations) |relations_map| {
+                if (relations_map.get(item_id)) |_| {
+                    return types.VdrValue{ .id = id, .entry_type = .relation, .ok = true };
+                }
+            }
+            return types.VdrValue.failed();
+        },
+
+        else => return types.VdrValue.failed(),
+    }
+}
+
+fn verify_kb_data_lookup(config: *kb_config.KbConfig) void {
+    std.debug.print("\n=== Verifying KBData Lookup ===\n", .{});
+
+    var total_checked: usize = 0;
+    var total_ok: usize = 0;
+    var total_failed: usize = 0;
+    var total_col0_present: usize = 0;
+
+    for (0..config.count) |i| {
+        const entry = &config.entries[i];
+        const kb = entry.kb orelse continue;
+
+        const data_list = kb.data orelse continue;
+
+        var kb_ok: usize = 0;
+        var kb_failed: usize = 0;
+
+        for (data_list.items) |*kbdata| {
+            const val = getVdrValue(config, kbdata.id);
+
+            if (val.ok and val.entry_type == .data and val.data != null) {
+                if (val.data.?.id.eql(kbdata.id)) {
+                    kb_ok += 1;
+                    if (val.data.?.text_column_0 != null) {
+                        total_col0_present += 1;
+                    }
+                } else {
+                    kb_failed += 1;
+                }
+            } else {
+                kb_failed += 1;
+            }
+
+            total_checked += 1;
+        }
+
+        if (kb_failed > 0) {
+            std.debug.print("  {s}: {d} ok, {d} FAILED\n", .{ entry.dottedSlice(), kb_ok, kb_failed });
+        }
+
+        total_ok += kb_ok;
+        total_failed += kb_failed;
+    }
+
+    std.debug.print("\n  total checked:     {}\n", .{total_checked});
+    std.debug.print("  total ok:          {}\n", .{total_ok});
+    std.debug.print("  total failed:      {}\n", .{total_failed});
+    std.debug.print("  total with col_0:  {}\n", .{total_col0_present});
+
+    if (total_failed == 0 and total_checked > 0) {
+        std.debug.print("  PASS: all {} data entries round-trip through getVdrValue\n", .{total_checked});
+    } else if (total_failed > 0) {
+        std.debug.print("  FAIL: {} entries failed lookup\n", .{total_failed});
+    }
 }
