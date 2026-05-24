@@ -22,11 +22,8 @@ const Arena = types.Arena;
 const DEFAULT_D_MODEL: i32 = 32;
 const DEFAULT_SEQ_LEN: i32 = 4;
 const DEFAULT_FFN_DIM: i32 = 64;
-// const DEFAULT_EPOCHS: i32 = 50;
-// const DEFAULT_LR: i32 = 512; // ~1/128 in Q16
-// const DEFAULT_LR: i32 = 4096; // ~1/16 in Q16, much more aggressive
 const DEFAULT_EPOCHS: i32 = 200;
-const DEFAULT_LR: i32 = 8192; // ~1/8 in Q16
+const DEFAULT_LR: i32 = 2048; // back to ~1/32
 const D: i32 = types.D16; // 65536
 
 // ============================================================
@@ -973,7 +970,9 @@ pub fn sgdStep(model: *GemmModel, lr: i32) void {
 
 fn sgdUpdateQ16(weights: []Q16, grads: []i32, lr: i32) void {
     for (weights, grads) |*w, g| {
-        const update: i64 = @as(i64, lr) * @as(i64, g);
+        // Clip gradient to prevent explosion
+        const clipped: i32 = if (g > 32767) 32767 else if (g < -32768) -32768 else g;
+        const update: i64 = @as(i64, lr) * @as(i64, clipped);
         const step: i32 = @intCast(@divTrunc(update, D));
         w.v -= step;
     }
@@ -1160,14 +1159,11 @@ pub fn buildTrainingWindows(
     seq_len: i32,
 ) struct { windows: []TrainingWindow, count: usize } {
     _ = model;
-    const max_windows: usize = 2048;
+    const max_windows: usize = 4096;
     const windows = arena.allocSlice(TrainingWindow, max_windows) orelse return .{ .windows = &.{}, .count = 0 };
     var count: usize = 0;
     const sl: usize = @intCast(seq_len);
 
-    // Each relation (from, to) generates a training window:
-    // context = [from, from, from, from] (padded), target = to
-    // And reverse: context = [to, to, to, to], target = from
     for (0..load_result.relationship_count) |ri| {
         const rel = &load_result.relationships[ri];
         if (rel.canonical_type == .unknown) continue;
@@ -1175,20 +1171,25 @@ pub fn buildTrainingWindows(
         const from_idx = findTokenIndex(undefined, load_result, arena_base, rel.fromSlice()) orelse continue;
         const to_idx = findTokenIndex(undefined, load_result, arena_base, rel.toSlice()) orelse continue;
 
-        // Forward window
+        // Forward: context has from token in last positions, target is to
+        // Use [0, 0, from, from] so attention can see from in recent positions
         if (count < max_windows) {
             var w = &windows[count];
             w.* = TrainingWindow{
                 .context = [_]i32{0} ** 16,
                 .target = to_idx,
             };
+            // Fill from right: last positions are most attended
             for (0..sl) |s| {
-                w.context[s] = from_idx;
+                if (s >= sl / 2) {
+                    w.context[s] = from_idx;
+                }
+                // first half stays 0 (padding token)
             }
             count += 1;
         }
 
-        // Reverse window
+        // Reverse
         if (count < max_windows) {
             var w = &windows[count];
             w.* = TrainingWindow{
@@ -1196,7 +1197,26 @@ pub fn buildTrainingWindows(
                 .target = from_idx,
             };
             for (0..sl) |s| {
-                w.context[s] = to_idx;
+                if (s >= sl / 2) {
+                    w.context[s] = to_idx;
+                }
+            }
+            count += 1;
+        }
+
+        // Also build chain windows: [from, to, from, to] → next related
+        // This teaches the model that from and to co-occur
+        if (count < max_windows) {
+            var w = &windows[count];
+            w.* = TrainingWindow{
+                .context = [_]i32{0} ** 16,
+                .target = to_idx,
+            };
+            var pos: usize = 0;
+            while (pos < sl) {
+                w.context[pos] = from_idx;
+                if (pos + 1 < sl) w.context[pos + 1] = to_idx;
+                pos += 2;
             }
             count += 1;
         }
