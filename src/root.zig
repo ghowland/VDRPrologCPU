@@ -9,6 +9,8 @@ const compact_loader = @import("vdr_compact_loader.zig");
 const kb_config = @import("vdr_kb_config.zig");
 const vdr_gemm = @import("vdr_gemm.zig");
 
+const vdr_prolog = @import("vdr_prolog.zig");
+
 // Types
 const TextBig = @import("text_big.zig").TextBig;
 const text_small = @import("text_small.zig");
@@ -108,11 +110,17 @@ pub fn main() void {
 
     print_sample_data_entry(config);
 
-    // // Test the GEMM
-    // vdr_gemm_test.testGemm(global_arena, config);
+    // Prolog
+    vdr_prolog.testProlog(global_arena, config);
 
-    // More Real
-    vdr_gemm.testGemm(global_arena, config);
+    // GEMM
+    if (false) {
+        // // Test the GEMM
+        // vdr_gemm_test.testGemm(global_arena, config);
+
+        // More Real
+        vdr_gemm.testGemm(global_arena, config);
+    }
 
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);

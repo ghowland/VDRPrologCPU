@@ -2331,6 +2331,7 @@ pub const RelationType = enum(i32) {
     organizes, // General: X arranges multiple Y into coherent structure or relationship
     controls, // General: X directs or determines the behavior or movement of Y
     input_to, // General: X is consumed or incorporated as feedstock by process Y
+    virtualizes,
 
     // Identity and binding (2000+)
     instance_of = 2000, // General: X is a particular case of Y
@@ -2474,7 +2475,7 @@ pub const RelationType = enum(i32) {
             .hazard_of => .unknown, // "has_hazard" is query reversal
             .traverses => .unknown, // "traversed_by" is query reversal
             .removes => .unknown, // "removed_by" is query reversal
-            .evolves_to => .unknown, // "evolved_from" is query reversal
+            // .evolves_to => .unknown, // "evolved_from" is query reversal
             .connects_to => .connects_to, // symmetric
             .propagates_via => .unknown, // "carries" is query reversal
             .virtualizes => .unknown, // "virtualized_by" is query reversal
@@ -2482,7 +2483,7 @@ pub const RelationType = enum(i32) {
             .disrupts => .unknown, // "disrupted_by" is query reversal
             .frames => .unknown, // "framed_by" is query reversal
             .organizes => .unknown, // "organized_by" is query reversal
-            .controls => .unknown, // "controlled_by" is query reversal
+            // .controls => .unknown, // "controlled_by" is query reversal
             .evolves_to => .derived_from, // was .unknown
             .controls => .determined_by, // was .unknown
 
