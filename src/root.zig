@@ -7,7 +7,6 @@ const resetable_memory = @import("resetable_memory.zig");
 const vdr_http = @import("vdr_http.zig");
 const compact_loader = @import("vdr_compact_loader.zig");
 const kb_config = @import("vdr_kb_config.zig");
-const vdr_gemm_test = @import("vdr_gemm_test.zig");
 const vdr_gemm = @import("vdr_gemm.zig");
 
 // Types
