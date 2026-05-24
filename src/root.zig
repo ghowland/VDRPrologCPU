@@ -105,6 +105,8 @@ pub fn main() void {
     populate_kb_data_columns(global_arena, config);
     verify_kb_data_lookup(config);
 
+    print_sample_data_entry(config);
+
     // Start HTTP server on unpinned thread (HT1: non-pinned)
     const http_port: u16 = @intCast(cfg.http_port);
     const http_thread = std.Thread.spawn(.{}, vdr_http.run, .{http_port}) catch {
@@ -641,5 +643,99 @@ fn verify_kb_data_lookup(config: *kb_config.KbConfig) void {
         std.debug.print("  PASS: all {} data entries round-trip through getVdrValue\n", .{total_checked});
     } else if (total_failed > 0) {
         std.debug.print("  FAIL: {} entries failed lookup\n", .{total_failed});
+    }
+}
+
+fn print_sample_data_entry(config: *kb_config.KbConfig) void {
+    std.debug.print("\n=== Sample KBData Entry ===\n", .{});
+
+    // Find root.edu.physics, pick row 0 (should be first entry like K1 or D1)
+    for (0..config.count) |i| {
+        const entry = &config.entries[i];
+        if (!std.mem.eql(u8, entry.dottedSlice(), "root.edu.physics")) continue;
+
+        const kb = entry.kb orelse return;
+        const data_list = kb.data orelse return;
+        if (data_list.items.len == 0) return;
+
+        // Lookup via getVdrValue to prove the round-trip
+        const first_id = data_list.items[0].id;
+        const val = getVdrValue(config, first_id);
+
+        if (!val.ok or val.data == null) {
+            std.debug.print("  getVdrValue FAILED for first entry\n", .{});
+            return;
+        }
+
+        const d = val.data.?;
+        const s = d.id.structural();
+
+        std.debug.print("  KB:         {s}\n", .{entry.dottedSlice()});
+        std.debug.print("  VdrId:      {}\n", .{d.id.v});
+        std.debug.print("  scope:      {}\n", .{s.scope});
+        std.debug.print("  entry_type: {}\n", .{s.entry_type});
+        std.debug.print("  L1:         {}\n", .{s.l1});
+        std.debug.print("  L2:         {}\n", .{s.l2});
+        std.debug.print("  L3:         {}\n", .{s.l3});
+        std.debug.print("  L4:         {}\n", .{s.l4});
+        std.debug.print("  L5:         {}\n", .{s.l5});
+        std.debug.print("  item_id:    {}\n", .{s.item_id});
+
+        std.debug.print("  --- columns ---\n", .{});
+        printCol("  col_0", d.text_column_0);
+        printCol("  col_1", d.text_column_1);
+        printCol("  col_2", d.text_column_2);
+        printCol("  col_3", d.text_column_3);
+        printCol("  col_4", d.text_column_4);
+        printCol("  col_5", d.text_column_5);
+        printCol("  col_6", d.text_column_6);
+        printCol("  col_7", d.text_column_7);
+        printCol("  col_8", d.text_column_8);
+
+        std.debug.print("  --- values ---\n", .{});
+        std.debug.print("  v_0: {}, col: {}\n", .{ d.v_0.v, d.v_0_column });
+        std.debug.print("  v_1: {}, col: {}\n", .{ d.v_1.v, d.v_1_column });
+        std.debug.print("  v_2: {}, col: {}\n", .{ d.v_2.v, d.v_2_column });
+        std.debug.print("  v_3: {}, col: {}\n", .{ d.v_3.v, d.v_3_column });
+
+        // Print a few more entries to show variety
+        std.debug.print("\n  --- first 5 entries ---\n", .{});
+        const show = @min(data_list.items.len, 5);
+        for (0..show) |idx| {
+            const item = &data_list.items[idx];
+            std.debug.print("  [{d}] ", .{idx});
+            if (item.text_column_0) |c0| {
+                if (c0.text) |t| {
+                    std.debug.print("col_0=\"{s}\"", .{t.text[0..t.len]});
+                }
+            }
+            if (item.text_column_1) |c1| {
+                if (c1.text) |t| {
+                    std.debug.print(" col_1=\"{s}\"", .{t.text[0..t.len]});
+                }
+            }
+            if (item.text_column_2) |c2| {
+                if (c2.text) |t| {
+                    std.debug.print(" col_2=\"{s}\"", .{t.text[0..t.len]});
+                }
+            }
+            std.debug.print("\n", .{});
+        }
+
+        return;
+    }
+
+    std.debug.print("  root.edu.physics not found\n", .{});
+}
+
+fn printCol(label: []const u8, col: ?types.KBDataValue) void {
+    if (col) |c| {
+        if (c.text) |t| {
+            std.debug.print("{s}: \"{s}\"\n", .{ label, t.text[0..t.len] });
+        } else {
+            std.debug.print("{s}: (value only) v={}\n", .{ label, c.v.v });
+        }
+    } else {
+        std.debug.print("{s}: null\n", .{label});
     }
 }
