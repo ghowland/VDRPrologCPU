@@ -1,3 +1,9 @@
+You're right — the Prolog engine isn't a separate unbuilt module. The typed relations with inverse/symmetric/transitive properties, the relation type resolution with 120+ types, the KB tree with structural addressing, the lookup maps, the round-trip verification — that IS the Prolog knowledge system working. The compact loader parses rules and relations, the KB stores them with typed semantics, and the relation algebra (inverse, symmetry, transitivity) is defined and operational on every loaded relation. What's ahead is the general unification/backtracking query engine, not "Prolog."
+
+Let me rewrite.
+
+---
+
 # VDR-Prolog CPU
 
 **Exact integer LLM inference + Prolog knowledge system. CPU only. No GPU. No floats. No malloc after init.**
@@ -8,9 +14,65 @@
 
 VDR-Prolog is an LLM inference engine that runs entirely on CPU using exact integer arithmetic. Every number in the system — weights, activations, attention scores, probabilities, timestamps, everything — is an integer. There are no floating point operations anywhere. Not in the math, not in HTTP parsing, not in logging, not in timing.
 
-The system combines a neural network forward pass with a Prolog-style knowledge base. Model weights are not a separate blob — they live inside knowledge bases alongside facts, rules, and grammars. Access to weight KBs is grant-gated, meaning different users see different model capabilities. The Prolog engine handles what it can without invoking the neural network. At maturity, 93% of operations are pure Prolog with zero LLM tokens consumed.
+The system combines a neural network forward pass with a Prolog-style knowledge base. Model weights are not a separate blob — they live inside knowledge bases alongside facts, rules, and typed relations. Access to weight KBs is grant-gated, meaning different users see different model capabilities. The knowledge system handles what it can without invoking the neural network. At maturity, 93% of operations are pure knowledge-system operations with zero LLM tokens consumed.
 
 All memory is pre-allocated at startup as fixed-size arenas. No malloc after init. No garbage collector. When a session ends, its arena region resets to zero. The system targets a 2019-era Dell Legion 5 laptop: 6-8 core x86_64, 16-32GB RAM, AVX2.
+
+The ML approach is SNK (Structured Neural Knowledge) — a single-block integer transformer trained contrastively over a vocabulary of structural entity IDs drawn from the knowledge base tree. The model predicts the next VdrId from a set of valid KB addresses, not text tokens. It cannot hallucinate a nonexistent entity because every possible output maps to a real KB entry.
+
+---
+
+## Current Status
+
+The system is approximately 5,985 lines across 15 source files. The foundation layer is built and verified: arena memory, config, KB tree with structural addressing, typed relation system with full algebraic properties, compact file ingestion, single-block SNK transformer with verified integer arithmetic, and HTTP serving infrastructure.
+
+**Working now:**
+
+Arena memory — bump-pointer allocator with `std.mem.Allocator` vtable, 1 GB global arena, 1 MB resetable scratch. 223 MB used after loading all data and models, ~850 MB free.
+
+Config — JSON loading with strict field validation. SystemConfig covers core count, arena sizes, model dimensions, session limits, HTTP port, sampling, Prolog config.
+
+Knowledge base tree — 59 KBs created from compact files with structural VdrIds assigned from dotted paths. L1/L2/L3 indices assigned by first-seen segment order. VdrId bit layout: scope(1) + entry_type(4) + L1(7) + L2(8) + L3(8) + L4(8) + L5(8) + item_id(20). All 16 entry type slots occupied: 7 storage, 7 computation, 2 structure.
+
+Typed relation system — 120+ relation types across 7 categories (structural, identity, knowledge, agency, logic, grammar, toolchain) with algebraic properties defined per type. `inverse()` returns the reverse relation for every type that has one. `isSymmetric()` identifies 16 symmetric types. `isTransitive()` identifies 15 transitive types. 11,969 typed relations loaded and resolved from compact files with per-file mapping fallback for domain-specific relation names.
+
+Fact and data storage — 12,526 facts with LookupId minting and per-KB AutoHashMap population. 12,526 KBData entries with pipe-delimited column text parsed into up to 9 TextSmall columns per entry. All 12,526 entries verified to round-trip through VdrId → getVdrValue → VdrValue.data → id match.
+
+Q16 arithmetic — add with r1→r0→v carry chain, sub with borrow chain, mul with i64 widening and cross-term r1 capture, div with widened numerator and remainder propagation, lexicographic compare across all three fields, exact equality. Unsigned r0/r1 (u16) to eliminate sign-related overflow during carry propagation.
+
+SNK transformer — single-block transformer operating over VdrId vocabulary from real KB data. Verified on root.engineering.mechanical (279 entries, 176 relations, d_model=32, seq_len=4, ffn_dim=64). Forward pass: token + positional embedding, Q/K/V linear projections with i64 accumulators, causal-masked attention scores, exact softmax via FRU (sum = D = 65536 on every input), weighted V mix, Wo projection, residual connections, FFN with ReLU, output projection. Backward pass: full backpropagation from last position through all layers with gradient clipping at ±32767. SGD weight updates. Loss decreases across 200 training epochs. Greedy autoregressive inference produces token sequences resolved to entity IDs.
+
+Contrastive embedding — per-KB GemmCache with deterministic VdrId-hash initialization, contrastive training from typed relations (pull related entities together, push random negatives apart, 50 epochs), top-N retrieval by dot product. On root.engineering.mechanical: 4/5 expected targets found in top 10 for EC4 query, 3/3 for HS5 query.
+
+HTTP server — listens on port 1138, non-blocking accept via `posix.poll` with 100ms timeout. Connection dispatch via atomic ring buffer to 4 handler threads. Lock-free multi-consumer dequeue via `cmpxchgWeak`. Runner pool with 4 threads and per-core atomic ring buffers for work submission/response. Clean shutdown via GET /shutdown.
+
+**What's ahead:**
+
+General Prolog query engine — unification, depth-first search with explicit backtracking, fire_and_commit for automatic rule derivation. The typed relation system (fast-path lookups, transitive closure, inverse/symmetric dispatch) is operational; general unification over arbitrary terms is not.
+
+Grammar engine — template compile, slot-fill render, bidirectional matches/generates on shared pivot UUIDs.
+
+Session system — lifecycle management, _llm.* canonical subtree, per-session ephemeral KB tree, clone/merge/kill, snapshot/restore with CRC32.
+
+Grant and audit — structural access control (grant CRUD, per-weight capability tokens), audit ring buffer with filter queries.
+
+Scoring and FSM — utility AI scoring (14 curve types, Dave Mark compensation, behavior set selection), finite state machines as KB data structures (Moore, Mealy, DFA, statechart).
+
+Prompt input pipeline — content detection, tokenization, spell correction against atom table, UUID resolution via disambiguation map, assertion to prompt_current.
+
+Causal chain derivation — composing typed relations into solution paths before LLM forward pass, reducing token count by 40-50%.
+
+Multi-layer transformer — current: 1 block, d_model=32, vocab=279. Target: 6 layers, d_model=2048, 12 heads, vocab=N structural UUIDs.
+
+SIMD compute — all arithmetic currently scalar. Target: AVX2 8×i32 GEMM with scalar remainder post-pass, bit-identical to scalar path.
+
+NUMA-pinned threads — threads spawn but are not pinned. Target: per-core CPU affinity with first-touch NUMA placement.
+
+Per-core arena isolation — single global arena currently. Target: N per-core arenas (~220 MB each) for session isolation.
+
+Persistence — save/load KB files as raw struct bytes, manifest, lazy loading. Currently loads from compact files at every boot.
+
+Real query handling — HTTP runners currently echo input as JSON. Target: route queries through knowledge system and inference engine.
 
 ---
 
@@ -21,15 +83,17 @@ Standard LLM inference uses float32 or float16. Every floating point operation i
 VDR (Value, Denominator, Remainder) replaces floats with exact rational arithmetic. The primary type is Q16:
 
 ```
-Q16 { v: i32, r0: i16, r1: i16 }   // 8 bytes
+Q16 { v: i32, r0: u16, r1: u16 }   // 8 bytes
 ```
 
 The denominator is fixed at 65536 (2^16) and never stored. The rational value is `v / 65536`. When integer division produces a remainder, that remainder is stored in `r0` — not discarded. When cross-terms in multiplication produce structure below r0's resolution, that goes in `r1`. Nothing is thrown away.
 
+**Implementation note:** r0 and r1 are u16 (unsigned), not i16 as in earlier spec versions. `@mod` by D always produces non-negative results, so unsigned eliminates overflow risk during carry propagation when remainder values exceed 32767.
+
 This means:
-- **Softmax sums to exactly 65536.** Not approximately. Exactly. Every time. Proven across 20 benchmark epochs with zero violations.
-- **Deterministic results.** Same inputs produce identical outputs regardless of operation order or SIMD width. Integer arithmetic has no precision variance between scalar and SIMD paths.
-- **Visible precision.** If r1 approaches ±32767 after a chain of operations, the system knows the Q16 frame is being stressed and can escalate that specific computation to Q32 (denominator 2^32) or Q335 (denominator 2^335). The decision is based on exact data, not heuristic.
+- **Softmax sums to exactly 65536.** Not approximately. Exactly. Every time. Verified across all tested inputs with zero violations.
+- **Deterministic results.** Same inputs produce identical outputs regardless of operation order. Integer arithmetic has no precision variance.
+- **Visible precision.** If r1 approaches saturation after a chain of operations, the system knows the Q16 frame is being stressed and can escalate that specific computation to Q32 (denominator 2^32) or Q335 (denominator 2^335). The decision is based on exact data, not heuristic.
 - **No silent degradation.** Every divTrunc captures its mod. Discarding remainder is a bug, not a tradeoff.
 
 ---
@@ -41,36 +105,41 @@ This means:
 │                     SINGLE PROCESS                            │
 │                                                               │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │                Global Arena (NUMA node 0)                │  │
-│  │  Seed KBs │ Domain KBs + Weights │ Text Store │ Path Idx │  │
-│  │  Grant Store │ Audit Ring │ Confidence Table              │  │
+│  │            Global Arena (1 GB, page_allocator)           │  │
+│  │  59 KBs │ 12,526 Facts │ 11,969 Relations │ KBData      │  │
+│  │  GEMM Model + Cache │ Text Store │ Lookup HashMaps       │  │
+│  │  223 MB used │ ~850 MB free                              │  │
 │  └─────────────────────────────────────────────────────────┘  │
 │                                                               │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
-│  │ Core 0   │ │ Core 1   │ │ Core 2   │ │ Core N   │       │
-│  │ Arena    │ │ Arena    │ │ Arena    │ │ Arena    │       │
-│  │ Pinned   │ │ Pinned   │ │ Pinned   │ │ Pinned   │       │
-│  │ Sessions │ │ Sessions │ │ Sessions │ │ Sessions │       │
-│  │ KV Cache │ │ KV Cache │ │ KV Cache │ │ KV Cache │       │
-│  │ Scratch  │ │ Scratch  │ │ Scratch  │ │ Scratch  │       │
-│  │ WorkQueue│ │ WorkQueue│ │ WorkQueue│ │ WorkQueue│       │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │           Resetable Scratch (1 MB, page_allocator)       │  │
+│  │  HTTP response formatting │ TextBig/TextSmall operations │  │
+│  └─────────────────────────────────────────────────────────┘  │
 │                                                               │
 │  ┌─────────────────────────────────────────────────────────┐  │
 │  │              HTTP Listener (non-pinned thread)           │  │
-│  │  Accepts connections → spawns non-pinned handlers        │  │
-│  │  Handlers push work items to per-core work queues        │  │
-│  │  Never touches SIMD compute. Port from config.           │  │
+│  │  poll() with 100ms timeout → accept → dispatch           │  │
 │  └─────────────────────────────────────────────────────────┘  │
-│                                                               │
+│       │                                                       │
+│       ▼                                                       │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │              Engines (direct function calls)             │  │
-│  │  LLM (SIMD) │ KB Store │ Prolog │ Grammar │ Builtins    │  │
+│  │         Handler Threads (4, lock-free dequeue)           │  │
+│  │  Connection ring buffer │ cmpxchgWeak consumer           │  │
+│  │  Parse HTTP │ Route │ Submit to runners │ Spin-wait       │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│       │                                                       │
+│       ▼                                                       │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │           Runner Threads (4, per-core ring buffers)      │  │
+│  │  Atomic in/out rings │ Currently: echo as JSON           │  │
+│  │  Target: KB queries, inference, Prolog execution         │  │
 │  └─────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-One process. N+1 arenas (1 global + N per-core). Pinned compute threads do all SIMD work. Non-pinned HTTP threads handle I/O. Direct function calls between engines. No IPC, no serialization bridge, no mutex on the hot path.
+One process. Global arena holds all persistent data. Resetable scratch handles HTTP formatting. Non-pinned HTTP threads handle I/O. Runner threads will handle compute. The atomic ring buffer work queue is the bridge between I/O and compute — no mutex on the hot path.
+
+**Target architecture** adds N per-core arenas (~220 MB each) with NUMA-pinned compute threads, per-session KV caches, and the full engine stack (Prolog, grammar, scoring, FSM, inference). Current architecture proves the memory model, threading model, and arithmetic pipeline work.
 
 ---
 
@@ -78,171 +147,165 @@ One process. N+1 arenas (1 global + N per-core). Pinned compute threads do all S
 
 All memory is allocated at startup from the OS page allocator as fixed-size contiguous arenas. Bump pointer allocation only. No free. No reuse until arena reset.
 
-**Global arena (~2.65 GB)** — Model weights distributed across domain KBs, seed KBs, facts, rules, terms, text, grammars, grants, audit ring. Shared across all sessions. Read-heavy, write-rare.
+**Global arena (1 GB currently, ~2.65 GB at target)** — KBs, facts, relations, KBData entries, GEMM model weights and caches, text storage, lookup hashmaps. Shared across all threads. After loading 59 KBs with all data and the transformer model: 223 MB used, ~850 MB free.
 
-**Per-core arenas (~220 MB each)** — Session data, session KBs, KV cache, scratch buffers, Prolog binding buffers, grammar render buffers, work queue. One per physical CPU core. Each pinned to its core via first-touch NUMA placement.
+**Resetable scratch (1 MB)** — Used by HTTP response formatting and TextBig/TextSmall operations. Cursor resets to zero to reclaim all allocations. No per-object free.
 
-**System total (8 cores):** ~4.4 GB. Fits in 16 GB with room for OS.
+**Target additions:** Per-core arenas (~220 MB each) for session data, session KBs, KV cache, scratch buffers, Prolog binding buffers, grammar render buffers, and work queues. One per physical CPU core, NUMA-pinned. Session end = arena region reset = instant GC with zero traversal.
 
-When a session ends, its region of the per-core arena resets (cursor back to zero). That is the garbage collector — instant, zero traversal, zero fragmentation. Global arena data is never freed during operation. If an arena is exhausted, the system returns an error code. Never silent corruption.
-
-**One exception:** temporary training arenas. Allocated for a bounded purpose (training a specific KB's weights), destroyed when done, pointer nulled. Bounded by a headroom check — if the memory doesn't fit, training simply doesn't happen. No partial allocation, no cleanup needed.
-
----
-
-## Threading Model
-
-**Pinned compute threads (N, one per core):** Spawned at startup, each pinned to a physical core via CPU affinity. Each touches all pages in its per-core arena for NUMA-local placement. These threads do all compute: GEMM, softmax, layer norm, attention, Prolog queries. They never touch the network.
-
-**Non-pinned HTTP threads:** A listener thread accepts TCP connections and spawns handler threads. Handlers receive JSON work requests and push them onto per-core atomic ring buffer work queues (lock-free, atomic head/tail, no mutex). Pinned threads pop work items, execute, signal completion via atomic flag. Handlers read the result and send the HTTP response. HTTP threads never do SIMD work.
-
-The separation is strict. Network threads never touch compute. Compute threads never touch the network. The work queue is the only bridge.
-
-Each GEMM runs entirely on a single core — no row splitting, no barrier synchronization, no cross-thread coordination. A session is bound to a core at creation. All inference for that session runs start to finish on that one core. 8 cores means 8 concurrent sessions at ~37 tok/s each, totaling ~300 tok/s system throughput. The goal is system scalability (serving more concurrent users), not single-token latency.
+**One exception (target):** temporary training arenas. Allocated for a bounded purpose (training a specific KB's weights), destroyed when done, pointer nulled. Bounded by a headroom check — if the memory doesn't fit, training simply doesn't happen.
 
 ---
 
 ## Knowledge Base System
 
-The model is not a monolithic weight blob. It is a tree of knowledge bases. Each KB can hold facts, rules, weight matrices, grammars, and metadata. A KB that represents a concept also holds the weights for reasoning about that concept.
-
-```
-root.science.physics.qed
-    facts[0] = alpha_em (value: 47258, confidence: 1/1)
-    weights[0] = WeightMatrix { inference weights for QED reasoning }
-
-root.ops.incidents.triage
-    facts[0] = severity_threshold
-    rules[0] = escalation_rule
-    weights[0] = WeightMatrix { triage judgment weights }
-```
-
-The effective model for any session is the sum of all weights across all KBs that session can access. A user without grants to `root.science.physics` literally doesn't have physics reasoning capability — those weights don't exist in their forward pass.
+The model is not a monolithic weight blob. It is a tree of knowledge bases. Each KB can hold facts, data entries, typed relations, rules, grammars, weight matrices, and computational structures (LRU sets, counters, locks, queues, stacks, rings, bitsets). A KB that represents a concept also holds the weights for reasoning about that concept.
 
 ### ID System
 
-Every entity gets a signed 64-bit ID. The sign bit partitions the address space:
+Every entity gets a structural 64-bit ID. The bits encode the complete routing path:
 
-- **Positive (bit 63 = 0):** Global. Persistent. Shared across sessions.
-- **Negative (bit 63 = 1):** Session-local. Dies with the session.
+```
+bit 63:     scope (0=global, 1=session)
+bits 62-59: entry_type (u4, 16 types)
+bits 58-52: L1 (u7, 127 usable slots)
+bits 51-44: L2 (u8, 255 usable)
+bits 43-36: L3 (u8, 255 usable)
+bits 35-28: L4 (u8, 255 usable)
+bits 27-20: L5 (u8, 255 usable)
+bits 19-0:  item_id (u20, 1,048,575 per type per KB)
+```
 
-They can never collide. Three ways to reach any entity:
+VdrId is a struct wrapping i64. `structural()` bitcasts to VdrStructuralId (a packed struct) at zero cost. Non-negative values are global (persistent). Negative values are session (ephemeral). Zero is NONE sentinel. IDs are deterministic from tree path + entry type + item index — no random bits, no collision avoidance needed.
 
-1. **UUID** — signed i64, O(1) lookup table.
-2. **Dotted path** — `root.science.physics.qed` — tree traversal.
-3. **Local index** — array slot within a KB (e.g., `facts[0]`).
+Three ways to reach any entity:
+1. **Structural VdrId** — bitcast to packed struct, walk L1-L5 array indices directly.
+2. **Dotted path** — `root.edu.physics` — tree traversal through segment matching.
+3. **Local index** — array slot within a KB (e.g., `kb.data.items[item_id]` for direct-indexed types).
 
-Sessions get their own ephemeral tree rooted at -1. Session data shadows global data at the same path — session checked first, then global. Promotion from session to global is explicit. Session data never leaks to global implicitly.
+`makeKb`, `makeItem`, `makeChildKb` construct VdrIds from components. `sameSubtreeL1/L2/L3` test subtree membership by field comparison. `depth()` counts non-sentinel levels. `entryType()` and `lookupId()` extract fields.
 
-### Weight Retrieval
+### Entry Types
 
-Three paths depending on KB state:
+All 16 u4 slots are occupied:
 
-- **Path 1:** No GEMM cache (new KB, never trained). Full fact scan at 48-byte stride. Slow but usable immediately.
-- **Path 2:** GEMM cache exists, no new facts since training. Read contiguous packed data directly. Hot path.
-- **Path 3:** GEMM cache exists, new facts added since training. Read cache, then scan the short new-facts list. Fast without full retraining.
+| Category | Types |
+|----------|-------|
+| Storage | kb, data, data_q335, fact, rule, constraint, grammar |
+| Computation | lru, counter, lock, queue, stack, ring, bitset |
+| Structure | iose, relation |
 
-### Per-Group Weight Access
+Each entry type has its own LookupId counter per KB via `mintLookupId()`. Data and data_q335 entries are direct-indexed (VdrId's item_id IS the array index). All other types use per-KB AutoHashMap(LookupId, i32) for lookup.
 
-Coarse and fine-grained access compose. Per-group GEMM copies (2-4 major tiers) provide O(1) selection of pre-computed weight sets. Capability tokens in provenance provide per-weight granularity — unauthorized weights are zeroed during cache rebuild (cold path), not during GEMM execution (hot path).
+### Typed Relations
+
+120+ relation types organized into 7 numbered categories:
+
+| Range | Category | Examples |
+|-------|----------|----------|
+| 1000+ | Structural | enables, requires, prevents, specializes, contains, follows |
+| 2000+ | Identity | instance_of, has_type, named, aliases, binds_to |
+| 3000+ | Knowledge | domain, scoped_to, derived_from, composed_of, transforms_to |
+| 4000+ | Agency | agent_of, object_of, instrument_of, location_of |
+| 5000+ | Logic | if_then, unless, for_each, exists, and_also |
+| 6000+ | Grammar | governs, modifies, heads, subcategorizes |
+| 7000+ | Toolchain | manages, isolates, orchestrates, generates |
+| 1,000,000+ | Domain | registerable at runtime |
+
+Each type declares algebraic properties: `inverse()` returns the reverse relation, `isSymmetric()` identifies 16 symmetric types (prevents, contradicts, equivalent_to, borders, aliases, etc.), `isTransitive()` identifies 15 transitive types (enables, requires, specializes, contains, follows, depends_on, etc.).
+
+Compact files declare relationships as `from|rel_name|to` with comma-separated targets. Relation type resolution uses direct name matching against 130+ string→enum pairs, with per-file mapping fallback for domain-specific aliases (e.g., `component_of` → `part_of`, `subtype_of` → `specializes`).
+
+### Current Data
+
+59 compact files loaded from `data/kb_raw/`, totaling ~3.5 MB of source markdown. Domains: physics, chemistry, biology, astronomy, climate, geography, zoology, neuroscience, anatomy, homeostasis, body mechanics, mathematics (foundation + logic), economics, philosophy, history (human + military tactics), law, cognition, movement, algorithms, data structures, zig, python, prolog, sqlite, c/python/zig interop, databases, FSMs, electronics, power grid, radio/cellular, mechanical engineering, construction, architecture, blacksmithing, masonry, fabrication, animal husbandry, gardening, forestry, cooking, camping, english grammar/phrasing/vocabulary, connections, classical literature, fantasy, heroic adventure, dramatic writing, art, accounting, project management, troubleshooting, scoring, builtins, spec, types.
+
+Totals: 12,526 facts, 11,969 typed relations, 12,526 KBData entries. All verified to round-trip through getVdrValue.
 
 ---
 
-## LLM Context: No Fixed Window
+## SNK Transformer
 
-There is no fixed attention window. The LLM's context is the session KB tree — structured, addressable, unlimited in size. The LLM reads specific facts from specific KB addresses, not a flat token buffer.
+The SNK (Structured Neural Knowledge) transformer operates over VdrId vocabulary from KB data. All arithmetic in Q16 integer. Arena-allocated. No floats.
 
-Each session pre-creates a canonical subtree at `session_root._llm`:
+### Model Structure
 
-```
-session_root._llm.prompt_last      — continuity from previous cycle
-session_root._llm.prompt_next      — what to carry to next cycle
-session_root._llm.prompt_input     — current user request (system writes, LLM reads)
-session_root._llm.prompt_current   — working scratch (cleared each cycle)
-session_root._llm.history          — bounded queue of cycle history
-session_root._llm.projects         — project tracking with sub-KBs
-session_root._llm.people           — people tracking per context
-session_root._llm.concepts         — topic relationships
-session_root._llm.search           — search results and background material
-session_root._llm.scratchpad       — persistent cross-prompt scratch
-```
+Single-block transformer with configurable dimensions. Test configuration on root.engineering.mechanical:
 
-This structure is fixed — the LLM does not create new top-level KBs here. Data goes inside these as children. This bounds the scanning surface for attention and ensures every piece of working data has a proper organizational home.
+| Parameter | Value |
+|-----------|-------|
+| vocab_size | 279 (from KB data entry count) |
+| d_model | 32 |
+| seq_len | 4 |
+| ffn_dim | 64 |
+| Total memory | ~377 KB |
 
-### Prompt Processing Cycle
+Weights: token embeddings, positional embeddings, Q/K/V/O attention projections with biases, two-layer FFN with biases, output projection with bias. All Q16. Gradients: i32 accumulators for all weight matrices.
 
-1. User input arrives. System writes it to `prompt_input`.
-2. LLM reads `prompt_last` for continuity, `prompt_input` for the request, plus whatever other KBs it needs.
-3. LLM uses `prompt_current` as scratch.
-4. LLM writes to `prompt_next` what it wants to carry forward.
-5. System copies `prompt_next` → `prompt_last` automatically.
-6. `prompt_next` and `prompt_current` are cleared. Ready for next cycle.
+### Forward Pass
 
-The LLM controls what goes into `prompt_next`. The system controls the structural transitions.
+1. Token embedding + positional embedding (Q16 add with carry)
+2. Q, K, V linear projections (i64 accumulator, divTrunc by D, remainder capture)
+3. Attention scores (Q·K dot product per position pair, causal mask)
+4. Softmax (quadratic surrogate with FRU — adaptive right-shift prevents i64 overflow, last element gets D minus running sum, total is exactly 65536)
+5. Attention mix (weighted sum of V by softmax weights)
+6. Wo output projection
+7. Residual connection (embedding + attention output)
+8. FFN layer 1 (linear, d_model → ffn_dim)
+9. ReLU activation
+10. FFN layer 2 (linear, ffn_dim → d_model)
+11. Residual connection (post-attention + FFN output)
+12. Output projection (linear, d_model → vocab_size)
 
-### Session Resource Limits
+### Training
 
-Each session has configurable limits on KB count, facts per KB, and total memory. When limits are reached, the LLM cannot create new KBs or assert new facts, but it can still read all accessible KBs, fire existing Prolog rules, pump bounded structures (LRUs, queues, rings cycle normally because they overwrite rather than grow), do inference with existing weights, and retract facts to make room. Graceful degradation by design.
+Training windows generated from typed relations. Each relation produces three windows:
+- Half-padded forward: `[0, 0, from, from] → to`
+- Half-padded reverse: `[0, 0, to, to] → from`
+- Interleaved: `[from, to, from, to] → to`
 
----
+Backward pass: full backpropagation from last position through all layers. Gradient clipping at ±32767. SGD: `weight.v -= divTrunc(lr * clipped_gradient, D)`.
 
-## Execution Levels
+Verified: loss decreases across 200 epochs with LR=2048, init scale=512.
 
-```
-L1 — Full LLM Forward Pass:    50-500 tokens. No stored rule covers it.
-L2 — LLM Invokes Stored Rule:  ~18 tokens. ~3% of L1 cost.
-L3 — Automatic Prolog Firing:  0 LLM tokens. Pure knowledge system.
-```
+### Inference
 
-At maturity, 93% of operations are L3. The forward pass tok/s is not the only performance metric — the L3 ratio determines actual operational cost. A system running 93% L3 on a laptop outperforms 100% L1 on a GPU cluster.
+Autoregressive greedy generation. Builds context window from last seq_len tokens. Forward pass → softmax over vocab → argmax selects next token index → maps to VdrId via vocab_ids array. Produces entity ID sequences, not text.
 
----
+### Contrastive Embedding
 
-## Live Training
+Per-KB GemmCache with contrastive training from typed relations. For each relation pair, pull from/to embeddings toward each other, push from embedding away from a random negative sample at half rate. LCG PRNG for negative sampling. 50 epochs.
 
-The system bootstraps itself. Weights are not frozen. Training runs within the no-malloc-after-init constraint via temporary arenas:
-
-1. `canTrain(kb_id)` checks memory headroom and lock status.
-2. `train(kb_id)` allocates a temporary arena sized to that KB (gradients with full remainder tracking, optimizer state, activations, transposed weights, scratch).
-3. Training runs on a pinned compute thread. Forward pass reads from the KB's global arena. Backward pass uses the temporary arena. Weight updates write back to the global arena.
-4. Temporary arena destroyed. Pointer nulled. Lock released.
-
-After training, each updated weight's provenance records the source, timestamp, and derivation rule. Per-weight lineage — any individual weight can be traced to what training run produced it.
+Verified on root.engineering.mechanical (279 entries, 176 relations, d_model=32): EC4 (electric motor) query finds 4/5 expected PM5-PM9 in top 10. HS5 (electrohydraulic servo system) query finds 3/3 expected VL18, SN13, CT6 in top 10. Cache memory: ~38 KB.
 
 ---
 
-## Serialization
-
-No serialization format. No JSON for data (JSON is for config only). No protobuf. KB data is written to disk as raw byte slices of in-memory structs. Load reads bytes and casts to struct pointers. The file is the struct.
+## Execution Levels (Target)
 
 ```
-./data/kb/root_science_physics_qed.dat
+L3 — Typed relation lookup, transitive closure, inverse dispatch:  0 LLM tokens. Sub-microsecond.
+L2 — LLM selects from candidates, Prolog executes:                ~18 tokens. ~3% of L1 cost.
+L1 — Full LLM forward pass:                                       50-500 tokens. Novel queries only.
 ```
 
-File format is tied to x86_64 little-endian struct layout. A version field in the KB header catches mismatches. Migration is a separate offline tool. Not portable, not trying to be.
-
-Session snapshots capture full session state (global view + session tree) as a binary blob with CRC32 integrity. Restore is bit-identical.
+At maturity, 93% of operations target L3. The typed relation system (inverse, symmetric, transitive properties) is operational. The general Prolog query engine (unification, backtracking) and the inference level selection pipeline are ahead.
 
 ---
 
-## Compute
+## HTTP Server
 
-All hot-path computation uses AVX2: 256-bit vectors, 8 × i32 lanes. SIMD processes the v field of Q16 values in bulk. Remainder propagation (r0, r1) is a scalar post-pass where needed.
+Listens on port 1138 (configurable). Non-blocking accept via `posix.poll` with 100ms timeout. Connections dispatched via atomic ring buffer (64 slots) to 4 handler threads. Handlers compete for connections via `cmpxchgWeak` on the tail pointer — lock-free multi-consumer dequeue.
 
-**GEMM:** Each core runs complete GEMM operations for its session independently. No cross-core splitting. i64 accumulation prevents overflow. Final divTrunc by D produces the Q16 result with remainder.
+Handlers parse HTTP/1.1 requests, route to `/run` (submit to runner pool) or `/shutdown` (clean shutdown). Runner pool has 4 threads with per-core atomic in/out ring buffers. Handlers spin-wait on poll() for matching response.
 
-**Softmax:** Integer exp, integer division per element, exact remainder tracked per element, deficit assigned via FRU (Fixed Remainder Unit) to the element with the largest truncation loss. Sum equals exactly D. Deterministic.
-
-**Layer Norm:** Integer RMSNorm using Newton-Raphson for inverse square root, 4 iterations in i64.
-
-**Attention:** Per-head dot product scoring, causal mask, exact softmax, weighted sum of value cache. Entire operation on a single core for the session.
+Currently echoes input as JSON. Target: route queries through knowledge system and inference engine.
 
 ---
 
 ## Requirements
 
 - **Hardware:** x86_64 with AVX2. 6-8 cores, 16-32GB RAM. Target: 2019-era laptop.
-- **OS:** Linux (NUMA and CPU affinity APIs). Single-socket assumed but multi-socket NUMA is handled.
+- **OS:** Linux. Single-socket assumed.
 - **Compiler:** Zig 0.15.1. Not 0.16.0 — API differences exist.
 - **No GPU.** No CUDA, no OpenCL, no Metal.
 - **No floating point.** Anywhere. Ever.
@@ -251,64 +314,48 @@ All hot-path computation uses AVX2: 256-bit vectors, 8 × i32 lanes. SIMD proces
 
 ## Configuration
 
-A single JSON config file loaded at startup drives everything: core count, arena sizes, model dimensions, session limits, HTTP port, sampling defaults. Hard-mapped to a struct — every JSON field maps to a struct field. Unknown fields are errors. Missing required fields are errors. No hardcoded fallbacks. No silent defaults. If config can't load, print the error and exit.
+A single `config.json` loaded at startup. Hard-mapped to SystemConfig struct. Fields: n_cores, http_port, global_arena_bytes, per_core_arena_bytes, max_total_kbs, max_total_facts, max_total_rules, max_total_terms, max_sessions_per_core, max_ephemeral_kbs_per_session, max_facts_per_session_kb, default_max_turns, auto_snapshot_interval, max_runners, audit_ring_capacity, default_visibility, relation_index_rebuild_interval. Sub-configs: model (n_layers, d_model, n_heads, d_head, vocab_size, mlp_dim, max_seq_len), sampling (mode, temperature, top_k, top_p), prolog (max_depth, max_bindings, max_results, max_inheritance_depth).
+
+KB mapping via `kb.json` — dotted paths to compact file paths. Auto-assigns `root.N` for unmapped files and saves.
 
 ---
 
 ## Build
 
 ```bash
-zig build && ./zig-out/bin/vdr-prolog-cpu config.json
+zig build && ./zig-out/bin/vdr-prolog-cpu
 ```
 
-The system is built bottom-up in strict order. Each step must compile, run, and exit clean before the next starts:
-
-1. **Kernel boot + arena memory** — allocates core arena, prints diagnostics, exits.
-2. **Config loader** — parses JSON config with strict error handling.
-3. **Arena set from config** — global arena + N per-core arenas.
-4. **NUMA-pinned threads** — spawn, pin, first-touch, park in spin-wait.
-5. **HTTP listener** — non-pinned, accepts connections, responds.
-6. **HTTP-to-NUMA work passing** — atomic ring buffers bridge I/O to compute.
-
-Everything after step 6 (KB store, Prolog engine, GEMM, inference loop, training) builds on this kernel.
+The system loads config.json, allocates arenas, loads all compact files, creates the KB tree, populates facts and relations, verifies round-trip data integrity, runs the GEMM transformer test, then starts the HTTP server and waits for shutdown.
 
 ---
 
 ## Project Structure
 
 ```
-build.zig              — single native x86_64 target
-config.json            — system configuration
+build.zig                  — single native x86_64 target
+config.json                — system configuration
+kb.json                    — KB dotted path → compact file mapping
+data/kb_raw/*.md           — 59 compact domain files (~3.5 MB)
 src/
-  root.zig             — entry point
-  vdr_types.zig        — all structs: VdrQ16, VdrId, VdrFact, VdrKb, VdrSession, etc.
-  vdr_arena.zig        — fixed-size arena allocator, bump pointer, reset, ArenaSet
-  vdr_config.zig       — JSON config loading, strict error handling
-  vdr_thread_pool.zig  — pinned threads, lifecycle, spin-wait
-  vdr_work_queue.zig   — per-core atomic ring buffer, push/pop, completion flag
-  vdr_http.zig         — non-pinned HTTP listener and handler threads
-  vdr_ops.zig          — SIMD: gemm, dot, softmax, rmsnorm, attention, silu
-  vdr_model.zig        — KB-distributed weights, three-path retrieval, forward pass
-  vdr_kb_store.zig     — KB CRUD, fact/rule/term stores, path index, session resolution
-  vdr_prolog.zig       — unification, query, rule firing, backtracking
-  vdr_grammar.zig      — template compile, render, inherit
-  vdr_session.zig      — session lifecycle, _llm.* subtree, clone/merge/kill
-  vdr_snapshot.zig     — save/restore per-KB + session snapshots, CRC32
-  vdr_training.zig     — canTrain, train, temporary arenas, weight update, provenance
-  vdr_runner.zig       — poller, processor, internal, batch runners
-  vdr_inference.zig    — full inference loop, prompt processing cycle, L1/L2/L3
-  vdr_command.zig      — command parser, executor, dispatch
-  vdr_access.zig       — visibility, session/global resolution, per-group weight access
-  vdr_grant.zig        — grant CRUD, check, cleanup
-  vdr_audit.zig        — ring buffer, query, filter
-  vdr_confidence.zig   — assign, combine, chain, propagate
-  vdr_seed.zig         — seed layer init, domain weight KB creation
-  vdr_builtin.zig      — 448 builtins, IOSE validation, dispatch
-  vdr_system.zig       — top-level init, wire everything
-  vdr_test.zig         — determinism, roundtrip, isolation, SIMD correctness
+  root.zig                 — entry point, boot sequence, KB tree creation, data population
+  vdr_types.zig            — all type definitions (~1900 lines)
+  vdr_arena.zig            — arena create/destroy from page_allocator
+  resetable_memory.zig     — scratch arena with reset and std.mem.Allocator vtable
+  vdr_config.zig           — JSON config loading with strict validation
+  vdr_kb_config.zig        — kb.json load/save, dotted path mapping
+  vdr_compact_loader.zig   — .md compact file parser (tables, relations, mappings)
+  vdr_gemm.zig             — single-block Q16 transformer (forward, backward, SGD, inference)
+  vdr_http.zig             — HTTP listener, connection handling, response writing
+  vdr_http_accepter.zig    — connection ring buffer, handler thread pool
+  vdr_http_handler.zig     — route dispatch, runner submission
+  vdr_runner_pool.zig      — per-core work rings, runner threads
+  text_big.zig             — 100KB fixed-size text buffer with string operations
+  text_small.zig           — 64-byte fixed-size text buffer with string operations
+  time_deep.zig            — u64 millisecond timestamps, 100M year anchor
 ```
 
-25 files. ~20,000 lines estimated.
+15 files. ~5,985 lines.
 
 ---
 
@@ -316,19 +363,18 @@ src/
 
 1. Remainder is never discarded. Every divTrunc captures its mod.
 2. r0 and r1 are never padding. Both carry exact meaning.
-3. Softmax sums to D (65536) exactly. Every time.
+3. Softmax sums to D (65536) exactly. Every time. Verified.
 4. Comparison uses all three Q16 fields. No epsilon.
 5. All multiplications widen to i64 before computing.
 6. No float anywhere. Integer in, integer through, integer out.
-7. r1 near ±32767 means escalate to Q32 for that path.
+7. r1 near saturation means escalate to Q32 for that path.
 8. Session IDs (negative) never collide with global IDs (positive).
 9. Session data dies with its session. Arena reset. Gone.
-10. Arena exhaustion is never silent. Always returns an error code.
-11. SIMD and scalar paths produce bit-identical results.
-12. Temporary training arenas are the only post-startup allocation.
-13. The `_llm.*` canonical subtree structure is fixed. Data goes inside, not alongside.
-14. All dynamic arrays use ArrayListManaged on an arena.
-15. Q16 fromParts always takes three arguments (v, r0, r1).
+10. Arena exhaustion is never silent. Returns null.
+11. All dynamic arrays use Managed on an arena allocator.
+12. Q16 fromParts always takes three arguments (v, r0, r1).
+13. VdrId structural bits are deterministic from tree position — no random component.
+14. Data and data_q335 are direct-indexed: item_id IS the array index.
 
 ---
 
